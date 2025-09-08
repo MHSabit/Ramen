@@ -1,9 +1,20 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, UseGuards, UseInterceptors, UploadedFile, Patch, Query, HttpException, HttpStatus } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dtos/create-product.dto';
 import { UpdateProductDto } from './dtos/update-product.dtos';
+import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
+import { RolesGuard } from 'src/common/guard/role/roles.guard';
+import { Role } from 'src/common/guard/role/role.enum';
+import { Roles } from 'src/common/guard/role/roles.decorator';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
+import { ApiTags, ApiOperation, ApiConsumes, ApiBearerAuth } from '@nestjs/swagger';
 
-@Controller('products')
+@ApiTags('Admin Products')
+@ApiBearerAuth()
+@Controller('admin/products')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(Role.ADMIN)
 export class ProductsController {
 
     constructor(
@@ -12,14 +23,33 @@ export class ProductsController {
     
 
     // get all the product 
+    // we have to implement the pagination and the limit and the search using by the name of the product
     @Get()
-    getAllProducts() {
-        return this.productService.getAllProducts();
+    @ApiOperation({ summary: 'Get all products with pagination and search' })
+    getAllProducts(
+        @Query('q') q?: string,
+        @Query('limit') limit?: string,
+        @Query('page') page?: string
+    ) {
+        // Set defaults: page = 1, limit = 10
+        const pageNumber = page ? parseInt(page, 10) : 1;
+        const limitNumber = limit ? parseInt(limit, 10) : 10;
+        
+        // Validate inputs
+        if (pageNumber < 1) {
+            throw new HttpException('Page must be greater than 0', HttpStatus.BAD_REQUEST);
+        }
+        if (limitNumber < 1 || limitNumber > 100) {
+            throw new HttpException('Limit must be between 1 and 100', HttpStatus.BAD_REQUEST);
+        }
+        
+        return this.productService.getAllProducts(q, limitNumber, pageNumber);
     }
 
 
     // get product by id
     @Get(':id')
+    @ApiOperation({ summary: 'Get product by ID' })
     getProductById(@Param('id') id: string) {
         return this.productService.getProductById(id);
     }
@@ -27,8 +57,22 @@ export class ProductsController {
 
 
     // create product
-    @Post()
-    createProduct(@Body() product: CreateProductDto) {
+    @Post('/add-product')
+    @ApiOperation({ summary: 'Create a new product' })
+    @ApiConsumes('multipart/form-data')
+    @UseInterceptors(
+        FileInterceptor('image', {
+            storage: memoryStorage(),
+        }),
+    )
+    createProduct(
+        @Body() product: CreateProductDto,
+        @UploadedFile() image?: Express.Multer.File
+    ) {
+        // Add the uploaded file to the product data
+        if (image) {
+            product.image = image;
+        }
         return this.productService.createProduct(product);
     }
 
@@ -36,14 +80,30 @@ export class ProductsController {
 
 
     // update product by id
-    @Put(':id')
-    updateProductById(@Body() product:UpdateProductDto, @Param('id') id: string) {
-       return this.productService.updateProductById(id, product);
+    @Patch(':id')
+    @ApiOperation({ summary: 'Update product by ID' })
+    @ApiConsumes('multipart/form-data')
+    @UseInterceptors(
+        FileInterceptor('image', {
+            storage: memoryStorage(),
+        }),
+    )
+    updateProductById(
+        @Body() product: UpdateProductDto, 
+        @Param('id') id: string,
+        @UploadedFile() image?: Express.Multer.File
+    ) {
+        // Add the uploaded file to the product data
+        if (image) {
+            product.image = image;
+        }
+        return this.productService.updateProductById(id, product);
     }
 
 
     @Delete(':id')
-    deleteProductById(@Param('id') id: string) {
+    @ApiOperation({ summary: 'Delete product by ID' })
+    async deleteProductById(@Param('id') id: string) {
         return this.productService.deleteProductById(id);
     }
 }

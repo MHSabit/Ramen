@@ -326,14 +326,14 @@ export class AuthService {
   }
 
   async register({
-    name,
+   
     first_name,
     last_name,
     email,
     password,
     type,
   }: {
-    name: string;
+    
     first_name: string;
     last_name: string;
     email: string;
@@ -355,7 +355,7 @@ export class AuthService {
       }
 
       const user = await UserRepository.createUser({
-        name: name,
+   
         first_name: first_name,
         last_name: last_name,
         email: email,
