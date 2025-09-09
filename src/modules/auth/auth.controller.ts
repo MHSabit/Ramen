@@ -81,7 +81,6 @@ export class AuthController {
           HttpStatus.UNAUTHORIZED,
         );
       }
-      console.log('before Response');
 
       const response = await this.authService.register({
         first_name: first_name,
@@ -91,7 +90,6 @@ export class AuthController {
         type: type,
       });
 
-      console.log(response);
 
       return response;
     } catch (error) {

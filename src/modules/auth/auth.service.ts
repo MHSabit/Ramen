@@ -33,7 +33,8 @@ export class AuthService {
         },
         select: {
           id: true,
-          name: true,
+          first_name: true,
+          last_name: true,
           email: true,
           avatar: true,
           address: true,
@@ -54,13 +55,14 @@ export class AuthService {
 
       if (user.avatar) {
         user['avatar_url'] = SojebStorage.url(
-          appConfig().storageUrl.avatar + user.avatar,
+          appConfig().storageUrl.avatar + `/${user.avatar}`,
         );
       }
 
       if (user) {
         return {
           success: true,
+          message: 'User fetched successfully',
           data: user,
         };
       } else {
@@ -135,7 +137,7 @@ export class AuthService {
         // upload file
         const fileName = `${StringHelper.randomString()}${image.originalname}`;
         await SojebStorage.put(
-          appConfig().storageUrl.avatar + fileName,
+          appConfig().storageUrl.avatar + `/${fileName}`,
           image.buffer,
         );
 
@@ -288,6 +290,7 @@ export class AuthService {
 
       return {
         success: true,
+        message: 'Refresh token refreshed successfully',
         authorization: {
           type: 'bearer',
           access_token: accessToken,
