@@ -352,7 +352,7 @@ export class AuthService {
 
       if (userEmailExist) {
         return {
-          statusCode: 401,
+          success: false,
           message: 'Email already exist',
         };
       }
@@ -372,7 +372,6 @@ export class AuthService {
           message: 'Failed to create account',
         };
       }
-      console.log(user);
 
       // create stripe customer account
       // const stripeCustomer = await StripePayment.createCustomer({
