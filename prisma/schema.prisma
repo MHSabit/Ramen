@@ -449,6 +449,27 @@ model ProductCategory {
   @@map("product_categories")
 }
 
+
+model Cart {
+  id           String   @id @default(cuid())
+  user_id      String
+  product_id   String
+  quantity     Int      @default(1)
+  unit_price   Decimal  @db.Decimal(10,2)
+  total_price  Decimal  @db.Decimal(10,2)
+
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+  @@map("carts")
+}
+
+
+
+
+
+
+
+
 // this table stores example
 // model Note {
 //   id                String  @id @default(cuid())
