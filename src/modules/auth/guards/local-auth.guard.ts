@@ -23,16 +23,20 @@ export class LocalAuthGuard extends AuthGuard('local') {
     if (err || !user) {
       if (!email) {
         throw new HttpException(
-          { message: 'email not provided' },
-          HttpStatus.OK,
+          { success: false, message: 'email not provided' },
+          HttpStatus.BAD_REQUEST,
         );
       } else if (!password) {
         throw new HttpException(
-          { message: 'password not provided' },
-          HttpStatus.OK,
+          { success: false, message: 'password not provided' },
+          HttpStatus.BAD_REQUEST,
         );
       } else {
-        throw err || new UnauthorizedException();
+        const message = err?.message || info?.message || 'Unauthorized';
+        throw new HttpException(
+          { success: false, message },
+          HttpStatus.UNAUTHORIZED,
+        );
       }
     }
     return user;
