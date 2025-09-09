@@ -158,6 +158,7 @@ export class AuthService {
         return {
           success: true,
           message: 'User updated successfully',
+          data:null
         };
       } else {
         return {
@@ -260,6 +261,7 @@ export class AuthService {
       return {
         success: false,
         message: error.message,
+        data:null
       };
     }
   }
@@ -272,6 +274,7 @@ export class AuthService {
         return {
           success: false,
           message: 'Refresh token is required',
+          data:null
         };
       }
 
@@ -279,6 +282,7 @@ export class AuthService {
         return {
           success: false,
           message: 'User not found',
+          data:null
         };
       }
 
@@ -287,6 +291,7 @@ export class AuthService {
         return {
           success: false,
           message: 'User not found',
+          data:null
         };
       }
 
@@ -305,6 +310,7 @@ export class AuthService {
       return {
         success: false,
         message: error.message,
+        data:null
       };
     }
   }
@@ -316,6 +322,7 @@ export class AuthService {
         return {
           success: false,
           message: 'Refresh token not found',
+          data:null
         };
       }
 
@@ -324,11 +331,13 @@ export class AuthService {
       return {
         success: true,
         message: 'Refresh token revoked successfully',
+        data:null
       };
     } catch (error) {
       return {
         success: false,
         message: error.message,
+        data:null
       };
     }
   }
@@ -359,6 +368,7 @@ export class AuthService {
         return {
           success: false,
           message: 'Email already exist',
+          data:null
         };
       }
 
@@ -375,6 +385,7 @@ export class AuthService {
         return {
           success: false,
           message: 'Failed to create account',
+          data:null
         };
       }
 
@@ -434,11 +445,13 @@ export class AuthService {
       return {
         success: true,
         message: 'We have sent a verification link to your email',
+        data:null
       };
     } catch (error) {
       return {
         success: false,
         message: error.message,
+        data:null
       };
     }
   }
@@ -465,17 +478,20 @@ export class AuthService {
         return {
           success: true,
           message: 'We have sent an OTP code to your email',
+          data:null
         };
       } else {
         return {
           success: false,
           message: 'Email not found',
+          data:null
         };
       }
     } catch (error) {
       return {
         success: false,
         message: error.message,
+        data:null
       };
     }
   }
@@ -508,23 +524,27 @@ export class AuthService {
           return {
             success: true,
             message: 'Password updated successfully',
+            data:null
           };
         } else {
           return {
             success: false,
             message: 'Invalid token',
+            data:null
           };
         }
       } else {
         return {
           success: false,
           message: 'Email not found',
+          data:null
         };
       }
     } catch (error) {
       return {
         success: false,
         message: error.message,
+        data:null
       };
     }
   }
@@ -561,23 +581,27 @@ export class AuthService {
           return {
             success: true,
             message: 'Email verified successfully',
+            data:null
           };
         } else {
           return {
             success: false,
             message: 'Invalid token',
+            data:null
           };
         }
       } else {
         return {
           success: false,
           message: 'Email not found',
+          data:null
         };
       }
     } catch (error) {
       return {
         success: false,
         message: error.message,
+        data:null
       };
     }
   }
@@ -603,17 +627,20 @@ export class AuthService {
         return {
           success: true,
           message: 'We have sent a verification code to your email',
+          data:null
         };
       } else {
         return {
           success: false,
           message: 'Email not found',
+          data:null
         };
       }
     } catch (error) {
       return {
         success: false,
         message: error.message,
+        data:null
       };
     }
   }
@@ -636,23 +663,27 @@ export class AuthService {
           return {
             success: true,
             message: 'Password updated successfully',
+            data:null
           };
         } else {
           return {
             success: false,
             message: 'Invalid password',
+            data:null
           };
         }
       } else {
         return {
           success: false,
           message: 'Email not found',
+          data:null
         };
       }
     } catch (error) {
       return {
         success: false,
         message: error.message,
+        data:null
       };
     }
   }
@@ -676,17 +707,20 @@ export class AuthService {
         return {
           success: true,
           message: 'We have sent an OTP code to your email',
+          data:null
         };
       } else {
         return {
           success: false,
           message: 'User not found',
+          data:null
         };
       }
     } catch (error) {
       return {
         success: false,
         message: error.message,
+        data:null
       };
     }
   }
@@ -725,23 +759,27 @@ export class AuthService {
           return {
             success: true,
             message: 'Email updated successfully',
+            data:null
           };
         } else {
           return {
             success: false,
             message: 'Invalid token',
+            data:null
           };
         }
       } else {
         return {
           success: false,
           message: 'User not found',
+          data:null
         };
       }
     } catch (error) {
       return {
         success: false,
         message: error.message,
+        data:null
       };
     }
   }

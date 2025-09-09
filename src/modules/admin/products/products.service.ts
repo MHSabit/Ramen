@@ -274,6 +274,7 @@ export class ProductsService {
             return {
                 success: true,
                 message: "Product deleted successfully",
+                data: null
             };
         } catch (error) {
             if(error instanceof HttpException){

@@ -106,6 +106,7 @@ export class AuthController {
   
 
   // login user
+  // login user
   @ApiOperation({ summary: 'Login user' })
   @UseGuards(LocalAuthGuard)
   @Post('login')
@@ -127,7 +128,7 @@ export class AuthController {
         maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
       });
 
-      return response;
+      res.json(response);
     } catch (error) {
       return {
         success: false,
