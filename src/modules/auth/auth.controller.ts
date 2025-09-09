@@ -45,6 +45,7 @@ export class AuthController {
       return {
         success: false,
         message: 'Failed to fetch user details',
+        data:null
       };
     }
   }
@@ -96,6 +97,7 @@ export class AuthController {
       return {
         success: false,
         message: error.message,
+        data:null
       };
     }
   }
@@ -125,11 +127,12 @@ export class AuthController {
         maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
       });
 
-      res.json(response);
+      return response;
     } catch (error) {
       return {
         success: false,
         message: error.message,
+        data:null
       };
     }
   }
@@ -155,6 +158,7 @@ export class AuthController {
       return {
         success: false,
         message: error.message,
+        data:null
       };
     }
   }
@@ -171,6 +175,7 @@ export class AuthController {
       return {
         success: false,
         message: error.message,
+        data:null
       };
     }
   }
@@ -224,6 +229,7 @@ export class AuthController {
       return {
         success: false,
         message: 'Failed to update user',
+        data:null
       };
     }
   }
@@ -243,6 +249,7 @@ export class AuthController {
       return {
         success: false,
         message: 'Something went wrong',
+        data:null
       };
     }
   }
@@ -268,6 +275,7 @@ export class AuthController {
       return {
         success: false,
         message: 'Failed to verify email',
+        data:null
       };
     }
   }
@@ -286,6 +294,7 @@ export class AuthController {
       return {
         success: false,
         message: 'Failed to resend verification email',
+        data:null
       };
     }
   }
@@ -321,6 +330,7 @@ export class AuthController {
       return {
         success: false,
         message: 'Something went wrong',
+        data:null
       };
     }
   }
@@ -365,6 +375,7 @@ export class AuthController {
       return {
         success: false,
         message: 'Failed to change password',
+        data:null
       };
     }
   }

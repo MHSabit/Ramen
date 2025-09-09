@@ -50,6 +50,7 @@ export class AuthService {
         return {
           success: false,
           message: 'User not found',
+          data:null
         };
       }
 
@@ -69,12 +70,14 @@ export class AuthService {
         return {
           success: false,
           message: 'User not found',
+          data:null
         };
       }
     } catch (error) {
       return {
         success: false,
         message: error.message,
+        data:null
       };
     }
   }
@@ -160,12 +163,14 @@ export class AuthService {
         return {
           success: false,
           message: 'User not found',
+          data:null
         };
       }
     } catch (error) {
       return {
         success: false,
         message: error.message,
+        data:null
       };
     }
   }
