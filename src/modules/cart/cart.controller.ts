@@ -29,6 +29,16 @@ export class CartController {
         return this.cartService.addToCart(cart_id, req.body);
     }
 
+    @Put(':cart_id')
+    async updateCartItem(
+        @Param('cart_id') cart_id: string,
+        @Body() body: addToProductDto
+    ) {
+        console.log('cart_id:', cart_id);
+        // return "update";
+        return this.cartService.updateCartItem(cart_id, body);
+    }
+
     @Delete(':cart_id/:product_id')
     async removeCartItem(
     @Param('cart_id') cart_id: string,

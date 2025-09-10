@@ -80,6 +80,38 @@ export class CartService {
             throw new Error('Failed to add product to cart');
         }
     }
+
+    async updateCartItem(cartId: string, body: addToProductDto) {
+        try {
+                if (!cartId || !body.product_id) {
+                    throw new NotFoundException('Cart ID and Product ID are required');
+                }
+
+                const existingItem = await prisma.cart.findFirst({
+                    where: {
+                        cart_id: cartId,
+                        product_id: body.product_id,
+                    },
+                });
+
+                if (!existingItem) {
+                    throw new NotFoundException(
+                        `Product ${body.product_id} not found in cart ${cartId}`
+                );
+                }
+
+                const newQty = body.product_quantity;
+
+                return await prisma.cart.update({
+                    where: { id: existingItem.id },
+                    data: { quantity: newQty },
+                });
+            } catch (error) {
+                console.error('Error updating cart item:', error);
+                if (error instanceof NotFoundException) throw error;
+                throw new InternalServerErrorException('Failed to update cart item');
+        }
+    }
     
     //  Remove an item from cart
     async removeCartItem(cartId: string, productId: string) {
