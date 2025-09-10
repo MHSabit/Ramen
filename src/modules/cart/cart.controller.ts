@@ -1,6 +1,8 @@
-import { Body, Controller, Delete, Get, Post, Put, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
 import { CartService } from './cart.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Request } from 'express';
+import { addToProductDto } from './add-to-product.dto';
 
 // @UseGuards(JwtAuthGuard)
 @Controller('cart')
@@ -9,29 +11,30 @@ export class CartController {
         private readonly cartService: CartService
     ) {}
 
-    
-    @Get()
-    getCartByUserID(@Req() req: Request,) {
-        const user_id = "abc";
-        return this.cartService.getCartByUserID(user_id);
+    @Get(':id')
+    async getallproductByCartId(@Req() req: Request, @Query('id') id: string) {
+        return " get all product by cart id";
     }
 
-    @Post()
-    addToCart(@Body() body) {
-        console.log("sabit")
-        const user_id = "abc";
-        console.log(user_id, body);
-       return this.cartService.addToCart(user_id, body.product_id, body.quantity);
+    @Post(':cart_id')
+    async addToCart(
+        @Req() req: Request, 
+        @Body() body: addToProductDto, 
+        @Param('cart_id') cart_id: string   // ✅ use Param here
+    ) {
+        console.log('cart id inside controller', cart_id);
+        return this.cartService.addToCart(cart_id, req.body);
     }
+
 
     @Put()
-    updateCart() {
-        return 'This action updates cart';
+    async updateCartItem(@Req() req: Request) {
+        return " update cart item";
     }
 
-    @Delete()
-    removeCartItem() {
-        return 'This action deletes cart';
+    @Delete(':id')
+    async removeCartItem(@Req() req: Request, @Query('id') id: string) {
+        return " remove cart item";
     }
 
 }

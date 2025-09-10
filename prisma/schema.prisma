@@ -38,10 +38,11 @@ model User {
   deleted_at DateTime?
   status     Int?      @default(1) @db.SmallInt
 
+
   approved_at  DateTime?
   availability String?
-
-  email      String? @unique
+  email        String? @unique   // ✅ add this line
+  cart_id    String   @default(cuid()) @unique   // ✅ standalone, auto-generated
   username   String? @unique
   name       String? @db.VarChar(255)
   first_name String? @db.VarChar(255)
@@ -452,22 +453,14 @@ model ProductCategory {
 
 model Cart {
   id           String   @id @default(cuid())
-  user_id      String
+  cart_id      String
   product_id   String
   quantity     Int      @default(1)
   unit_price   Decimal  @db.Decimal(10,2)
-  total_price  Decimal  @db.Decimal(10,2)
-
   created_at   DateTime @default(now())
   updated_at   DateTime @updatedAt
   @@map("carts")
 }
-
-
-
-
-
-
 
 
 // this table stores example

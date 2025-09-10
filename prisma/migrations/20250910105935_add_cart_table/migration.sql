@@ -31,6 +31,7 @@ CREATE TABLE "users" (
     "approved_at" TIMESTAMP(3),
     "availability" TEXT,
     "email" TEXT,
+    "cart_id" TEXT NOT NULL,
     "username" TEXT,
     "name" VARCHAR(255),
     "first_name" VARCHAR(255),
@@ -318,6 +319,51 @@ CREATE TABLE "user_settings" (
 );
 
 -- CreateTable
+CREATE TABLE "products" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "price" DECIMAL(10,2) NOT NULL,
+    "quantity" INTEGER NOT NULL DEFAULT 0,
+    "category" TEXT,
+    "image" TEXT,
+    "spice_level" TEXT,
+    "features" TEXT,
+    "popular" BOOLEAN NOT NULL DEFAULT false,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "deleted_at" TIMESTAMP(3),
+
+    CONSTRAINT "products_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "product_categories" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "image" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "deleted_at" TIMESTAMP(3),
+
+    CONSTRAINT "product_categories_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "carts" (
+    "id" TEXT NOT NULL,
+    "cart_id" TEXT NOT NULL,
+    "product_id" TEXT NOT NULL,
+    "quantity" INTEGER NOT NULL DEFAULT 1,
+    "unit_price" DECIMAL(10,2) NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "carts_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "_PermissionToRole" (
     "A" TEXT NOT NULL,
     "B" TEXT NOT NULL,
@@ -332,6 +378,9 @@ CREATE UNIQUE INDEX "accounts_provider_provider_account_id_key" ON "accounts"("p
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "users_cart_id_key" ON "users"("cart_id");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "users_username_key" ON "users"("username");
 
 -- CreateIndex
@@ -339,6 +388,9 @@ CREATE UNIQUE INDEX "users_domain_key" ON "users"("domain");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "settings_key_key" ON "settings"("key");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "product_categories_name_key" ON "product_categories"("name");
 
 -- CreateIndex
 CREATE INDEX "_PermissionToRole_B_index" ON "_PermissionToRole"("B");
