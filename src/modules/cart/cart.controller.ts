@@ -11,9 +11,12 @@ export class CartController {
         private readonly cartService: CartService
     ) {}
 
-    @Get(':id')
-    async getallproductByCartId(@Req() req: Request, @Query('id') id: string) {
-        return " get all product by cart id";
+    @Get(':cart_id')
+    async getallproductByCartId(
+    @Param('cart_id') cart_id: string
+    ) {
+    console.log('cart id inside controller', cart_id);
+    return this.cartService.getallproductByCartId(cart_id);
     }
 
     @Post(':cart_id')
@@ -26,15 +29,14 @@ export class CartController {
         return this.cartService.addToCart(cart_id, req.body);
     }
 
-
-    @Put()
-    async updateCartItem(@Req() req: Request) {
-        return " update cart item";
-    }
-
-    @Delete(':id')
-    async removeCartItem(@Req() req: Request, @Query('id') id: string) {
-        return " remove cart item";
+    @Delete(':cart_id/:product_id')
+    async removeCartItem(
+    @Param('cart_id') cart_id: string,
+    @Param('product_id') product_id: string
+    ) {
+        console.log('cart_id:', cart_id);
+        console.log('product_id:', product_id);
+    return this.cartService.removeCartItem(cart_id, product_id);
     }
 
 }

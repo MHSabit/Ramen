@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { addToProductDto } from './add-to-product.dto';
 
@@ -6,13 +6,30 @@ const prisma = new PrismaClient();
 
 @Injectable()
 export class CartService {
-  constructor() {}
+    constructor() {}
 
-    async getCartByUserID(user_id: string) {
-        // return prisma.cart.findMany({
-        // where: { user_id },
-        // });
+    async getallproductByCartId(cart_id: string) {
+    try {
+        if (!cart_id) {
+            throw new NotFoundException('Cart ID is required');
+        }
+
+        const cart = await prisma.cart.findMany({
+            where: { cart_id },
+        });
+
+        if (!cart || cart.length === 0) {
+            throw new NotFoundException(`No items found for cart_id: ${cart_id}`);
+        }
+
+        return cart;
+    } catch (error) {
+        console.error('Error fetching cart items:', error);
+        if (error instanceof NotFoundException) throw error;
+        throw new InternalServerErrorException('Failed to fetch cart items');
+        }
     }
+
 
     async addToCart(cart_id: string, body: addToProductDto) {
     try {
@@ -63,116 +80,35 @@ export class CartService {
             throw new Error('Failed to add product to cart');
         }
     }
+    
+    //  Remove an item from cart
+    async removeCartItem(cartId: string, productId: string) {
+        try {
+                if (!cartId || !productId) {
+                    throw new NotFoundException('Cart ID and Product ID are required');
+                }
 
+                const existingItem = await prisma.cart.findFirst({
+                where: {
+                    cart_id: cartId,
+                    product_id: productId,
+                },
+                });
 
+                if (!existingItem) {
+                    throw new NotFoundException(
+                        `Product ${productId} not found in cart ${cartId}`
+                );
+                }
 
+                return await prisma.cart.delete({
+                    where: { id: existingItem.id },
+                });
+            } catch (error) {
+                console.error('Error removing cart item:', error);
+                if (error instanceof NotFoundException) throw error;
+                throw new InternalServerErrorException('Failed to remove cart item');
+        }
+    }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    // // Add product to cart
-    // async addToCart(user_id: string, productId: string, quantity: number) {
-    // try {
-    //     console.log(
-    //     'add to cart function inside the service file',
-    //     user_id,
-    //     productId,
-    //     quantity,
-    //     );
-
-    //     const product = await prisma.product.findUnique({
-    //     where: { id: productId },
-    //     });
-
-    //     console.log('product', product);
-
-    //     if (!product) {
-    //     throw new NotFoundException('Product not found');
-    //     }
-
-    //     const existingItem = await prisma.cart.findFirst({
-    //     where: {
-    //         user_id : user_id,
-    //         product_id: productId,
-    //     },
-    //     });
-
-    //     console.log('existing item', existingItem);
-
-    //     if (existingItem) {
-    //     const newQty = existingItem.quantity + quantity;
-    //     return prisma.cart.update({
-    //         where: { id: existingItem.id },
-    //         data: {
-    //         quantity: newQty,
-    //         total_price: product.price.mul(newQty),
-    //         },
-    //     });
-    //     }
-
-    //     //     return prisma.cart.create({
-    //     //         data: {
-    //     //             user_id,
-    //     //             product_id: productId,
-    //     //             quantity,
-    //     //             unit_price: product.price,
-    //     //             total_price: product.price.mul(quantity),
-    //     //         },
-    //     // });
-        
-    //     } catch (error) {
-    //         console.error(' Error in addToCart:', error);
-    //         throw error; // rethrow so NestJS can handl
-    //     }
-    // }
-
-
-    // // ✅ Update quantity of a cart item
-    // async updateCartItem(user_id: string, body) {
-    //     const cartId = body.cartId;
-    //     const productId = body.productId;
-    //     const quantity = body.quantity;
-    //     const cartItem = await prisma.cart.findUnique({ where: { id: cartId } });
-    //     if (!cartItem) throw new NotFoundException('Cart item not found');
-
-    //     return prisma.cart.update({
-    //     where: { 
-    //         id: cartId,
-    //         product_id: productId,
-    //     },
-    //     data: {
-    //         quantity,
-    //         total_price: cartItem.unit_price.mul(quantity),
-    //     },
-    //     });
-    // }
-
-    // // ✅ Remove an item from cart
-    // async removeCartItem(cartId: string, productId: string) {
-    //     return prisma.cart.delete({
-    //     where: { 
-    //         id: cartId,
-    //     },
-    //     });
-    // }
 }
