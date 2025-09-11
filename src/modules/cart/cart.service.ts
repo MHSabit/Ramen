@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { addToProductDto } from './add-to-product.dto';
 
@@ -9,24 +9,35 @@ export class CartService {
     constructor() {}
 
     async getallproductByCartId(cart_id: string) {
-    try {
-        if (!cart_id) {
-            throw new NotFoundException('Cart ID is required');
-        }
+        try {
+            if (!cart_id) {
+                throw new NotFoundException('Cart ID is required');
+            }
 
-        const cart = await prisma.cart.findMany({
-            where: { cart_id },
-        });
+            const cart = await prisma.cart.findMany({
+                where: { cart_id },
+            });
 
-        if (!cart || cart.length === 0) {
-            throw new NotFoundException(`No items found for cart_id: ${cart_id}`);
-        }
+            if (!cart || cart.length === 0) {
+                throw new NotFoundException(`No items found for cart_id: ${cart_id}`);
+            }
 
-        return cart;
-    } catch (error) {
-        console.error('Error fetching cart items:', error);
-        if (error instanceof NotFoundException) throw error;
-        throw new InternalServerErrorException('Failed to fetch cart items');
+            // return cart;
+            return {
+                success: true,
+                message: "All Products of the cart fetched successfully",
+                data: { cart }
+            };
+
+        } catch (error) {
+            if(error instanceof HttpException){
+                throw error;
+            }else{
+                throw new HttpException({
+                success: false,
+                message: error.message,
+                }, HttpStatus.INTERNAL_SERVER_ERROR);
+            }
         }
     }
 
@@ -59,14 +70,20 @@ export class CartService {
                 console.log(" sabit_quantity", existingItem.quantity, productQuantity );
                 const newQty = existingItem.quantity + productQuantity;
 
-                return await prisma.cart.update({
+                const updatedData =  await prisma.cart.update({
                     where: { id: existingItem.id },
                     data: { quantity: newQty },
                 });
+
+                return {
+                    success: true,
+                    message: "Products is added to cart successfully",
+                    data: {updatedData},
+                }; 
             }
 
             // 3. If not exist, create a new cart item
-            return await prisma.cart.create({
+            const newItem = await prisma.cart.create({
                 data: {
                     cart_id,
                     product_id: productId,
@@ -74,10 +91,23 @@ export class CartService {
                     unit_price: product.price,
                 },
             });
+
+            return  {
+                success: true,
+                message: "Products is added to cart successfully",
+                data: {
+                    newItem
+                },
+            };
         } catch (error) {
-            console.error('Error adding to cart:', error);
-            // Rethrow so NestJS can handle it via exception filters
-            throw new Error('Failed to add product to cart');
+            if(error instanceof HttpException){
+                throw error;
+            }else{
+                throw new HttpException({
+                    success: false,
+                    message: error.message,
+                }, HttpStatus.INTERNAL_SERVER_ERROR);
+            }
         }
     }
 
@@ -102,15 +132,28 @@ export class CartService {
 
                 const newQty = body.product_quantity;
 
-                return await prisma.cart.update({
+                const updatedCartItem =  await prisma.cart.update({
                     where: { id: existingItem.id },
                     data: { quantity: newQty },
                 });
+
+                return {
+                    success: true,
+                    message: "cart item updated successfully",
+                    data: {
+                        updatedCartItem
+                    },
+                };
             } catch (error) {
-                console.error('Error updating cart item:', error);
-                if (error instanceof NotFoundException) throw error;
-                throw new InternalServerErrorException('Failed to update cart item');
-        }
+                if(error instanceof HttpException){
+                    throw error;
+                }else{
+                    throw new HttpException({
+                        success: false,
+                        message: error.message,
+                    }, HttpStatus.INTERNAL_SERVER_ERROR);
+                }
+            }
     }
     
     //  Remove an item from cart
@@ -133,14 +176,29 @@ export class CartService {
                 );
                 }
 
-                return await prisma.cart.delete({
+                const deletedItem =  await prisma.cart.delete({
                     where: { id: existingItem.id },
                 });
+
+                return {
+                    success: true,
+                    message: "Products is removed from cart successfully",
+                    data: {
+                        deletedItem
+                    },
+                };
+
+
             } catch (error) {
-                console.error('Error removing cart item:', error);
-                if (error instanceof NotFoundException) throw error;
-                throw new InternalServerErrorException('Failed to remove cart item');
-        }
+                if(error instanceof HttpException){
+                    throw error;
+                } else{
+                    throw new HttpException({
+                        success: false,
+                        message: error.message,
+                    }, HttpStatus.INTERNAL_SERVER_ERROR);
+                }
+            }
     }
 
 }
