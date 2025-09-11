@@ -427,7 +427,7 @@ model Product {
   quantity    Int       @default(0)
   category    String?
   image       String?   // URL or path to the product image
-  spice_level String?   // Spice level for ramen products
+  spice_level Int?      @default(1)  // Spice level for ramen products
   features    String?   // Product features
   popular     Boolean   @default(false) // Whether product is popular
   created_at  DateTime  @default(now())

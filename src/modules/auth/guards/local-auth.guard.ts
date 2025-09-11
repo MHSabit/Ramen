@@ -18,6 +18,7 @@ export class LocalAuthGuard extends AuthGuard('local') {
   handleRequest(err, user, info, context: ExecutionContext, status) {
     // You can throw an exception based on either "info" or "err" arguments
     const request = context.switchToHttp().getRequest();
+    console.log(request.body);
     const { email, password } = request.body;
 
     if (err || !user) {

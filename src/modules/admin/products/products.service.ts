@@ -49,12 +49,15 @@ export class ProductsService {
             const totalPages = Math.ceil(totalCount / limit);
             const hasNextPage = page < totalPages;
             const hasPrevPage = page > 1;
-
+            const productsWithImageUrl = products.map(product => ({
+                ...product,
+                imageUrl: product.image ? `${appConfig().app.url}/public/storage/${product.image}` : null
+            }));
             return {
                 success: true,
                 message: "Products fetched successfully",
                 data: {
-                    products,
+                    products: productsWithImageUrl,
                     pagination: {
                         currentPage: page,
                         totalPages,
