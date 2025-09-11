@@ -4,7 +4,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Request } from 'express';
 import { addToProductDto } from './add-to-product.dto';
 
-// @UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard)
 @Controller('cart')
 export class CartController {
     constructor(
@@ -13,10 +13,11 @@ export class CartController {
 
     @Get(':cart_id')
     async getallproductByCartId(
-    @Param('cart_id') cart_id: string
+    @Param('cart_id') cart_id: string,
+    @Req() req: Request
     ) {
-    console.log('cart id inside controller', cart_id);
-    return this.cartService.getallproductByCartId(cart_id);
+        console.log('cart id inside controller', cart_id, req.user.userId);
+        return this.cartService.getallproductByCartId(cart_id);
     }
 
     @Post(':cart_id')
@@ -41,12 +42,11 @@ export class CartController {
 
     @Delete(':cart_id/:product_id')
     async removeCartItem(
-    @Param('cart_id') cart_id: string,
-    @Param('product_id') product_id: string
+        @Param('cart_id') cart_id: string,
+        @Param('product_id') product_id: string
     ) {
         console.log('cart_id:', cart_id);
         console.log('product_id:', product_id);
     return this.cartService.removeCartItem(cart_id, product_id);
     }
-
 }
