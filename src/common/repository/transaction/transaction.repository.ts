@@ -8,21 +8,21 @@ export class TransactionRepository {
    * @returns
    */
   static async createTransaction({
-    booking_id,
+    user_id,
     amount,
     currency,
     reference_number,
     status = 'pending',
   }: {
-    booking_id: string;
+    user_id: string;
     amount?: number;
     currency?: string;
     reference_number?: string;
     status?: string;
   }) {
     const data = {};
-    if (booking_id) {
-      data['booking_id'] = booking_id;
+    if (user_id) {
+      data['user_id'] = user_id;
     }
     if (amount) {
       data['amount'] = Number(amount);
@@ -103,6 +103,49 @@ export class TransactionRepository {
       },
       data: {
         ...data,
+      },
+    });
+  }
+
+  /**
+   * Get transactions by user ID
+   * @returns
+   */
+  static async getTransactionsByUserId(user_id: string) {
+    return await prisma.paymentTransaction.findMany({
+      where: {
+        user_id: user_id,
+      },
+      orderBy: {
+        created_at: 'desc',
+      },
+    });
+  }
+
+  /**
+   * Get successful transactions by user ID
+   * @returns
+   */
+  static async getSuccessfulTransactionsByUserId(user_id: string) {
+    return await prisma.paymentTransaction.findMany({
+      where: {
+        user_id: user_id,
+        status: 'succeeded',
+      },
+      orderBy: {
+        created_at: 'desc',
+      },
+    });
+  }
+
+  /**
+   * Get transaction by reference number (Stripe session/payment intent ID)
+   * @returns
+   */
+  static async getTransactionByReference(reference_number: string) {
+    return await prisma.paymentTransaction.findFirst({
+      where: {
+        reference_number: reference_number,
       },
     });
   }

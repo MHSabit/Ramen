@@ -247,6 +247,9 @@ model PaymentTransaction {
   paid_amount      Decimal?
   paid_currency    String?
 
+  // Relationship to order items (purchased products)
+  order_items OrderItem[]
+
   @@map("payment_transactions")
 }
 
@@ -434,6 +437,9 @@ model Product {
   updated_at  DateTime  @default(now())
   deleted_at  DateTime?
 
+  // Relationship to order items (when this product is purchased)
+  order_items OrderItem[]
+
   @@map("products")
 }
 
@@ -447,6 +453,31 @@ model ProductCategory {
   updated_at  DateTime  @default(now())
   deleted_at  DateTime?
   @@map("product_categories")
+}
+
+// OrderItem model to store purchased products in transactions
+model OrderItem {
+  id         String    @id @default(cuid())
+  created_at DateTime  @default(now())
+  updated_at DateTime  @default(now())
+  deleted_at DateTime?
+
+  // Link to the transaction
+  transaction_id String
+  transaction    PaymentTransaction @relation(fields: [transaction_id], references: [id], onDelete: Cascade)
+
+  // Link to the product (optional, in case product is deleted)
+  product_id String?
+  product    Product? @relation(fields: [product_id], references: [id])
+
+  // Product details at time of purchase (snapshot)
+  product_name        String
+  product_description String?
+  product_price       Decimal @db.Decimal(10, 2)
+  quantity            Int     @default(1)
+  total_price         Decimal @db.Decimal(10, 2) // product_price * quantity
+
+  @@map("order_items")
 }
 
 // this table stores example
