@@ -17,7 +17,7 @@ export class CartController {
     @Req() req: Request
     ) {
         console.log('cart id inside controller', cart_id, req.user.userId);
-        return this.cartService.getallproductByCartId(cart_id);
+        return this.cartService.getallproductByCartId(cart_id, req.user.userId);
     }
 
     @Post(':cart_id')
@@ -26,27 +26,29 @@ export class CartController {
         @Body() body: addToProductDto, 
         @Param('cart_id') cart_id: string   // ✅ use Param here
     ) {
-        console.log('cart id inside controller', cart_id);
-        return this.cartService.addToCart(cart_id, req.body);
+        console.log('cart id inside controller', cart_id, req.user.userId);
+        return this.cartService.addToCart(cart_id, req.body, req.user.userId);
     }
 
     @Put(':cart_id')
     async updateCartItem(
         @Param('cart_id') cart_id: string,
-        @Body() body: addToProductDto
+        @Body() body: addToProductDto,
+        @Req() req: Request
     ) {
         console.log('cart_id:', cart_id);
         // return "update";
-        return this.cartService.updateCartItem(cart_id, body);
+        return this.cartService.updateCartItem(cart_id, body, req.user.userId);
     }
 
     @Delete(':cart_id/:product_id')
     async removeCartItem(
         @Param('cart_id') cart_id: string,
-        @Param('product_id') product_id: string
+        @Param('product_id') product_id: string,
+        @Req() req: Request
     ) {
         console.log('cart_id:', cart_id);
         console.log('product_id:', product_id);
-    return this.cartService.removeCartItem(cart_id, product_id);
+        return this.cartService.removeCartItem(cart_id, product_id, req.user.userId);
     }
 }

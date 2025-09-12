@@ -8,10 +8,26 @@ const prisma = new PrismaClient();
 export class CartService {
     constructor() {}
 
-    async getallproductByCartId(cart_id: string) {
+    async getallproductByCartId(cart_id: string, userId: string) {
         try {
+            console.log('cart id -  User id ', cart_id, userId);
             if (!cart_id) {
                 throw new NotFoundException('Cart ID is required');
+            }
+
+            const user = await prisma.user.findUnique({
+                where: { id: userId },
+            });
+
+            // console.log('user', user);
+
+            if (!user) {
+                throw new NotFoundException('User not found');
+            }
+
+            if(user.cart_id !== cart_id){
+                // console.log("sabit",user.cart_id, cart_id);
+                throw new NotFoundException('Cart id is belog to other user');
             }
 
             const cart = await prisma.cart.findMany({
@@ -42,7 +58,7 @@ export class CartService {
     }
 
 
-    async addToCart(cart_id: string, body: addToProductDto) {
+    async addToCart(cart_id: string, body: addToProductDto, userId: string) {
     try {
             const productId = body.product_id;
             const productQuantity = body.product_quantity;
@@ -57,6 +73,15 @@ export class CartService {
                 throw new NotFoundException('Product not found');
             }
 
+            const user = await prisma.user.findUnique({
+                where: { id: userId },
+            });
+            console.log("sabit",user.cart_id, cart_id);
+            if(cart_id !== user.cart_id){
+                console.log("sabit",user.cart_id, cart_id);
+                throw new NotFoundException('Cart id is belog to other user');
+            }
+            
             // 2. Check if product already in cart
             const existingItem = await prisma.cart.findFirst({
             where: {
@@ -111,12 +136,19 @@ export class CartService {
         }
     }
 
-    async updateCartItem(cartId: string, body: addToProductDto) {
+    async updateCartItem(cartId: string, body: addToProductDto, userId: string) {
         try {
                 if (!cartId || !body.product_id) {
                     throw new NotFoundException('Cart ID and Product ID are required');
                 }
-
+                const user = await prisma.user.findUnique({
+                        where: { id: userId },
+                    });
+                console.log("sabit",user.cart_id, cartId);
+                if(cartId !== user.cart_id){
+                    console.log("sabit",user.cart_id, cartId);
+                    throw new NotFoundException('Cart id is belog to other user');
+                }
                 const existingItem = await prisma.cart.findFirst({
                     where: {
                         cart_id: cartId,
@@ -157,10 +189,19 @@ export class CartService {
     }
     
     //  Remove an item from cart
-    async removeCartItem(cartId: string, productId: string) {
+    async removeCartItem(cartId: string, productId: string, userId: string) {
         try {
                 if (!cartId || !productId) {
                     throw new NotFoundException('Cart ID and Product ID are required');
+                }
+
+                const user = await prisma.user.findUnique({
+                        where: { id: userId },
+                    });
+                console.log("sabit",user.cart_id, cartId);
+                if(cartId !== user.cart_id){
+                    console.log("sabit",user.cart_id, cartId);
+                    throw new NotFoundException('Cart id is belog to other user');
                 }
 
                 const existingItem = await prisma.cart.findFirst({
