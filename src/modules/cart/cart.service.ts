@@ -8,10 +8,26 @@ const prisma = new PrismaClient();
 export class CartService {
     constructor() {}
 
-    async getallproductByCartId(cart_id: string) {
+    async getallproductByCartId(cart_id: string, userId: string) {
         try {
+            console.log('cart id -  User id ', cart_id, userId);
             if (!cart_id) {
                 throw new NotFoundException('Cart ID is required');
+            }
+
+            const user = await prisma.user.findUnique({
+                where: { id: userId },
+            });
+
+            console.log('user', user);
+
+            if (!user) {
+                throw new NotFoundException('User not found');
+            }
+
+            if(user.cart_id !== cart_id){
+                console.log("sabit",user.cart_id, cart_id);
+                throw new NotFoundException('Cart id is belog to other user');
             }
 
             const cart = await prisma.cart.findMany({

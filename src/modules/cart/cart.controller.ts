@@ -17,7 +17,7 @@ export class CartController {
     @Req() req: Request
     ) {
         console.log('cart id inside controller', cart_id, req.user.userId);
-        return this.cartService.getallproductByCartId(cart_id);
+        return this.cartService.getallproductByCartId(cart_id, req.user.userId);
     }
 
     @Post(':cart_id')
