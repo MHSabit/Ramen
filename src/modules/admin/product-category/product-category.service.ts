@@ -110,6 +110,8 @@ export class ProductCategoryService {
                     name: productCategory.name,
                     description: productCategory.description,
                     image: imageUrl,
+                    icon: productCategory.icon,
+                    color: productCategory.color,
                 },
             });
             
@@ -172,6 +174,8 @@ export class ProductCategoryService {
             const updateData: any = {};
             if (productCategory.name !== undefined) updateData.name = productCategory.name;
             if (productCategory.description !== undefined) updateData.description = productCategory.description;
+            if (productCategory.icon !== undefined) updateData.icon = productCategory.icon;
+            if (productCategory.color !== undefined) updateData.color = productCategory.color;
 
             // Handle image upload if new image is provided
             if (productCategory.image) {

@@ -443,6 +443,8 @@ model ProductCategory {
   name        String    @unique
   description String?
   image       String?   // URL or path to the product image
+  icon        String    @default("Fish")
+  color       String    @default("Pink to Orange")
   created_at  DateTime  @default(now())
   updated_at  DateTime  @default(now())
   deleted_at  DateTime?
