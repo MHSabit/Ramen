@@ -39,8 +39,8 @@ export class UpdateProductDto extends PartialType(CreateProductDto) {
 
     @ApiProperty({ description: 'Spice level', example: 'Medium', required: false })
     @IsOptional()
-    @IsString()
-    spice_level?: string;
+    @IsNumber()
+    spice_level?: number;
 
     @ApiProperty({ description: 'Product features', example: 'Gluten-free, Vegan options available', required: false })
     @IsOptional()

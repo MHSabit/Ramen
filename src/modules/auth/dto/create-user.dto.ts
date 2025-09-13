@@ -8,15 +8,15 @@ export class CreateUserDto {
 
   @IsNotEmpty()
   @ApiProperty()
-  first_name?: string;
+  first_name: string;
 
   @IsNotEmpty()
   @ApiProperty()
-  last_name?: string;
+  last_name: string;
 
   @IsNotEmpty()
   @ApiProperty()
-  email?: string;
+  email: string;
 
   @IsNotEmpty()
   @MinLength(8, { message: 'Password should be minimum 8' })

@@ -45,6 +45,7 @@ export class AuthController {
       return {
         success: false,
         message: 'Failed to fetch user details',
+        data:null
       };
     }
   }
@@ -81,7 +82,6 @@ export class AuthController {
           HttpStatus.UNAUTHORIZED,
         );
       }
-      console.log('before Response');
 
       const response = await this.authService.register({
         first_name: first_name,
@@ -91,13 +91,13 @@ export class AuthController {
         type: type,
       });
 
-      console.log(response);
 
       return response;
     } catch (error) {
       return {
         success: false,
         message: error.message,
+        data:null
       };
     }
   }
@@ -106,10 +106,12 @@ export class AuthController {
   
 
   // login user
+  // login user
   @ApiOperation({ summary: 'Login user' })
   @UseGuards(LocalAuthGuard)
   @Post('login')
   async login(@Req() req: Request, @Res() res: Response) {
+    console.log(req.user);
     try {
       const user_id = req.user.id;
 
@@ -132,6 +134,7 @@ export class AuthController {
       return {
         success: false,
         message: error.message,
+        data:null
       };
     }
   }
@@ -157,6 +160,7 @@ export class AuthController {
       return {
         success: false,
         message: error.message,
+        data:null
       };
     }
   }
@@ -173,6 +177,7 @@ export class AuthController {
       return {
         success: false,
         message: error.message,
+        data:null
       };
     }
   }
@@ -226,6 +231,7 @@ export class AuthController {
       return {
         success: false,
         message: 'Failed to update user',
+        data:null
       };
     }
   }
@@ -245,6 +251,7 @@ export class AuthController {
       return {
         success: false,
         message: 'Something went wrong',
+        data:null
       };
     }
   }
@@ -270,6 +277,7 @@ export class AuthController {
       return {
         success: false,
         message: 'Failed to verify email',
+        data:null
       };
     }
   }
@@ -288,6 +296,7 @@ export class AuthController {
       return {
         success: false,
         message: 'Failed to resend verification email',
+        data:null
       };
     }
   }
@@ -323,6 +332,7 @@ export class AuthController {
       return {
         success: false,
         message: 'Something went wrong',
+        data:null
       };
     }
   }
@@ -367,6 +377,7 @@ export class AuthController {
       return {
         success: false,
         message: 'Failed to change password',
+        data:null
       };
     }
   }

@@ -33,7 +33,8 @@ export class AuthService {
         },
         select: {
           id: true,
-          name: true,
+          first_name: true,
+          last_name: true,
           email: true,
           avatar: true,
           address: true,
@@ -49,30 +50,34 @@ export class AuthService {
         return {
           success: false,
           message: 'User not found',
+          data:null
         };
       }
 
       if (user.avatar) {
         user['avatar_url'] = SojebStorage.url(
-          appConfig().storageUrl.avatar + user.avatar,
+          appConfig().storageUrl.avatar + `/${user.avatar}`,
         );
       }
 
       if (user) {
         return {
           success: true,
+          message: 'User fetched successfully',
           data: user,
         };
       } else {
         return {
           success: false,
           message: 'User not found',
+          data:null
         };
       }
     } catch (error) {
       return {
         success: false,
         message: error.message,
+        data:null
       };
     }
   }
@@ -135,7 +140,7 @@ export class AuthService {
         // upload file
         const fileName = `${StringHelper.randomString()}${image.originalname}`;
         await SojebStorage.put(
-          appConfig().storageUrl.avatar + fileName,
+          appConfig().storageUrl.avatar + `/${fileName}`,
           image.buffer,
         );
 
@@ -153,17 +158,20 @@ export class AuthService {
         return {
           success: true,
           message: 'User updated successfully',
+          data:null
         };
       } else {
         return {
           success: false,
           message: 'User not found',
+          data:null
         };
       }
     } catch (error) {
       return {
         success: false,
         message: error.message,
+        data:null
       };
     }
   }
@@ -253,6 +261,7 @@ export class AuthService {
       return {
         success: false,
         message: error.message,
+        data:null
       };
     }
   }
@@ -265,6 +274,7 @@ export class AuthService {
         return {
           success: false,
           message: 'Refresh token is required',
+          data:null
         };
       }
 
@@ -272,6 +282,7 @@ export class AuthService {
         return {
           success: false,
           message: 'User not found',
+          data:null
         };
       }
 
@@ -280,6 +291,7 @@ export class AuthService {
         return {
           success: false,
           message: 'User not found',
+          data:null
         };
       }
 
@@ -288,6 +300,7 @@ export class AuthService {
 
       return {
         success: true,
+        message: 'Refresh token refreshed successfully',
         authorization: {
           type: 'bearer',
           access_token: accessToken,
@@ -297,6 +310,7 @@ export class AuthService {
       return {
         success: false,
         message: error.message,
+        data:null
       };
     }
   }
@@ -308,6 +322,7 @@ export class AuthService {
         return {
           success: false,
           message: 'Refresh token not found',
+          data:null
         };
       }
 
@@ -316,11 +331,13 @@ export class AuthService {
       return {
         success: true,
         message: 'Refresh token revoked successfully',
+        data:null
       };
     } catch (error) {
       return {
         success: false,
         message: error.message,
+        data:null
       };
     }
   }
@@ -349,8 +366,9 @@ export class AuthService {
 
       if (userEmailExist) {
         return {
-          statusCode: 401,
+          success: false,
           message: 'Email already exist',
+          data:null
         };
       }
 
@@ -367,9 +385,9 @@ export class AuthService {
         return {
           success: false,
           message: 'Failed to create account',
+          data:null
         };
       }
-      console.log(user);
 
       // create stripe customer account
       // const stripeCustomer = await StripePayment.createCustomer({
@@ -427,11 +445,13 @@ export class AuthService {
       return {
         success: true,
         message: 'We have sent a verification link to your email',
+        data:null
       };
     } catch (error) {
       return {
         success: false,
         message: error.message,
+        data:null
       };
     }
   }
@@ -458,17 +478,20 @@ export class AuthService {
         return {
           success: true,
           message: 'We have sent an OTP code to your email',
+          data:null
         };
       } else {
         return {
           success: false,
           message: 'Email not found',
+          data:null
         };
       }
     } catch (error) {
       return {
         success: false,
         message: error.message,
+        data:null
       };
     }
   }
@@ -501,23 +524,27 @@ export class AuthService {
           return {
             success: true,
             message: 'Password updated successfully',
+            data:null
           };
         } else {
           return {
             success: false,
             message: 'Invalid token',
+            data:null
           };
         }
       } else {
         return {
           success: false,
           message: 'Email not found',
+          data:null
         };
       }
     } catch (error) {
       return {
         success: false,
         message: error.message,
+        data:null
       };
     }
   }
@@ -554,23 +581,27 @@ export class AuthService {
           return {
             success: true,
             message: 'Email verified successfully',
+            data:null
           };
         } else {
           return {
             success: false,
             message: 'Invalid token',
+            data:null
           };
         }
       } else {
         return {
           success: false,
           message: 'Email not found',
+          data:null
         };
       }
     } catch (error) {
       return {
         success: false,
         message: error.message,
+        data:null
       };
     }
   }
@@ -596,17 +627,20 @@ export class AuthService {
         return {
           success: true,
           message: 'We have sent a verification code to your email',
+          data:null
         };
       } else {
         return {
           success: false,
           message: 'Email not found',
+          data:null
         };
       }
     } catch (error) {
       return {
         success: false,
         message: error.message,
+        data:null
       };
     }
   }
@@ -629,23 +663,27 @@ export class AuthService {
           return {
             success: true,
             message: 'Password updated successfully',
+            data:null
           };
         } else {
           return {
             success: false,
             message: 'Invalid password',
+            data:null
           };
         }
       } else {
         return {
           success: false,
           message: 'Email not found',
+          data:null
         };
       }
     } catch (error) {
       return {
         success: false,
         message: error.message,
+        data:null
       };
     }
   }
@@ -669,17 +707,20 @@ export class AuthService {
         return {
           success: true,
           message: 'We have sent an OTP code to your email',
+          data:null
         };
       } else {
         return {
           success: false,
           message: 'User not found',
+          data:null
         };
       }
     } catch (error) {
       return {
         success: false,
         message: error.message,
+        data:null
       };
     }
   }
@@ -718,23 +759,27 @@ export class AuthService {
           return {
             success: true,
             message: 'Email updated successfully',
+            data:null
           };
         } else {
           return {
             success: false,
             message: 'Invalid token',
+            data:null
           };
         }
       } else {
         return {
           success: false,
           message: 'User not found',
+          data:null
         };
       }
     } catch (error) {
       return {
         success: false,
         message: error.message,
+        data:null
       };
     }
   }
