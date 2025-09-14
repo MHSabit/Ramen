@@ -21,7 +21,7 @@ export class ProductsController {
     // we have to implement the pagination and the limit and the search using by the name of the product
     @Get()
     @ApiOperation({ summary: 'Get all products with pagination and search' })
-    getAllProducts(
+    async getAllProducts(
         @Query('q') q?: string,
         @Query('limit') limit?: string,
         @Query('page') page?: string
@@ -38,7 +38,7 @@ export class ProductsController {
             throw new HttpException('Limit must be between 1 and 100', HttpStatus.BAD_REQUEST);
         }
         
-        return this.productService.getAllProducts(q, limitNumber, pageNumber);
+        return await this.productService.getAllProducts(q, limitNumber, pageNumber);
     }
 
 
@@ -50,8 +50,8 @@ export class ProductsController {
     // @Roles(Role.ADMIN)
     @Get(':id')
     @ApiOperation({ summary: 'Get product by ID' })
-    getProductById(@Param('id') id: string) {
-        return this.productService.getProductById(id);
+    async getProductById(@Param('id') id: string) {
+        return await this.productService.getProductById(id);
     }
 
 
@@ -70,7 +70,7 @@ export class ProductsController {
             storage: memoryStorage(),
         }),
     )
-    createProduct(
+    async createProduct(
         @Body() product: CreateProductDto,
         @UploadedFile() image?: Express.Multer.File
     ) {
@@ -78,7 +78,7 @@ export class ProductsController {
         if (image) {
             product.image = image;
         }
-        return this.productService.createProduct(product);
+        return await this.productService.createProduct(product);
     }
 
 
@@ -97,7 +97,7 @@ export class ProductsController {
             storage: memoryStorage(),
         }),
     )
-    updateProductById(
+    async updateProductById(
         @Body() product: UpdateProductDto, 
         @Param('id') id: string,
         @UploadedFile() image?: Express.Multer.File
@@ -106,7 +106,7 @@ export class ProductsController {
         if (image) {
             product.image = image;
         }
-        return this.productService.updateProductById(id, product);
+        return await this.productService.updateProductById(id, product);
     }
 
 
@@ -121,6 +121,6 @@ export class ProductsController {
     @Delete(':id')
     @ApiOperation({ summary: 'Delete product by ID' })
     async deleteProductById(@Param('id') id: string) {
-        return this.productService.deleteProductById(id);
+        return await this.productService.deleteProductById(id);
     }
 }

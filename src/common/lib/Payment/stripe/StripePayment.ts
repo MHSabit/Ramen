@@ -154,32 +154,58 @@ export class StripePayment {
    * @param price
    * @returns
    */
-  static async createCheckoutSession() {
+  static async createCheckoutSession({
+    customer_id,
+    products,
+    currency = 'usd',
+    description,
+    metadata,
+  }: {
+    customer_id?: string;
+    products: Array<{
+      name: string;
+      price: number;
+      quantity?: number;
+      description?: string;
+      product_id?: string;
+    }>;
+    currency?: string;
+    description?: string;
+    metadata?: stripe.MetadataParam;
+  }) {
     const success_url = `${
       appConfig().app.url
     }/success?session_id={CHECKOUT_SESSION_ID}`;
     const cancel_url = `${appConfig().app.url}/failed`;
 
-    const session = await Stripe.checkout.sessions.create({
+    // Create line items for each product
+    const line_items = products.map(product => ({
+      price_data: {
+        currency: currency,
+        product_data: {
+          name: product.name,
+          description: product.description || description,
+        },
+        unit_amount: product.price * 100, // Convert to cents
+      },
+      quantity: product.quantity || 1,
+    }));
+
+    const sessionData: stripe.Checkout.SessionCreateParams = {
       mode: 'payment',
       payment_method_types: ['card'],
-      line_items: [
-        {
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: 'Sample Product',
-            },
-            unit_amount: 2000, // $20.00
-          },
-          quantity: 1,
-        },
-      ],
-
+      line_items: line_items,
       success_url: success_url,
       cancel_url: cancel_url,
-      // automatic_tax: { enabled: true },
-    });
+      metadata: metadata,
+    };
+
+    // Add customer if provided
+    if (customer_id) {
+      sessionData.customer = customer_id;
+    }
+
+    const session = await Stripe.checkout.sessions.create(sessionData);
     return session;
   }
 
