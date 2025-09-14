@@ -8,16 +8,15 @@ import {
   export class CreateProductDto {
     @ApiProperty({ description: 'Product name', example: 'Tonkotsu Ramen' })
     @IsNotEmpty()
-    @IsString()
+    @IsString() 
     name: string;
-  
-    @ApiPropertyOptional({ description: 'Product category (defaults to "all products")', example: 'Ramen' })
-    @IsOptional()
+
+    @ApiProperty({ description: 'Product category ID', example: 'category-uuid-here' })
+    @IsNotEmpty()
     @IsString()
-    @Transform(({ value }) => (typeof value === 'string' && value.trim()) ? value : 'all products')
-    category?: string;
-  
-    @ApiPropertyOptional({ description: 'Product description', example: 'Rich pork bone broth ramen' })
+    categoryId: string;
+
+    @ApiProperty({ description: 'Product description', example: 'Rich pork bone broth ramen', required: false })
     @IsOptional()
     @IsString()
     description?: string;

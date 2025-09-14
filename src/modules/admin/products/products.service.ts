@@ -136,7 +136,7 @@ export class ProductsService {
                     description: product.description,
                     price: product.price,
                     image: imageUrl,
-                    category: product.category,
+                    categoryId: product.categoryId,
                     quantity: product.quantity || 0,
                     spice_level: product.spice_level,
                     features: product.features,
@@ -190,7 +190,7 @@ export class ProductsService {
             if (product.name !== undefined) updateData.name = product.name;
             if (product.description !== undefined) updateData.description = product.description;
             if (product.price !== undefined) updateData.price = product.price;
-            if (product.category !== undefined) updateData.category = product.category;
+            if (product.categoryId !== undefined) updateData.categoryId = product.categoryId;
             if (product.quantity !== undefined) updateData.quantity = product.quantity;
             if (product.spice_level !== undefined) updateData.spice_level = product.spice_level;
             if (product.features !== undefined) updateData.features = product.features;
