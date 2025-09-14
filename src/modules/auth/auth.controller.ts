@@ -91,7 +91,7 @@ export class AuthController {
         type: type,
       });
 
-      console.log(response);
+      console.log('Inside register ' ,response);
 
       return response;
     } catch (error) {
