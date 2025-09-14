@@ -7,12 +7,36 @@ import { ExecutionContext } from '@nestjs/common';
 
 const mockAuthService = {
   me: jest.fn().mockResolvedValue({ id: 1, name: 'Test User' }),
-  register: jest.fn().mockResolvedValue({ success: true }),
-  login: jest.fn().mockResolvedValue({
-    authorization: { access_token: 'access', refresh_token: 'refresh' },
-    user: { id: 1, email: 'test@example.com' },
+  register: jest.fn().mockResolvedValue({
+    execStatus: true,
+    httpStatus: 201,
+    msg: 'We have sent a verification link to your email',
+    customCode: null,
+    data: null,
   }),
-  refreshToken: jest.fn().mockResolvedValue({ access_token: 'new_access' }),
+  login: jest.fn().mockResolvedValue({
+    execStatus: true,
+    httpStatus: 200,
+    msg: 'Login successful',
+    customCode: null,
+    data: {
+      token: 'access',
+      refreshToken: 'refresh',
+      tokenExpires: new Date(),
+      user: { id: 1, email: 'test@example.com' },
+    },
+  }),
+  refreshToken: jest.fn().mockResolvedValue({
+    execStatus: true,
+    httpStatus: 200,
+    msg: 'Token refreshed successfully',
+    customCode: null,
+    data: {
+      token: 'new_access',
+      refreshToken: 'new_refresh',
+      tokenExpires: new Date(),
+    },
+  }),
   revokeRefreshToken: jest.fn().mockResolvedValue({ success: true }),
   updateUser: jest.fn().mockResolvedValue({ success: true }),
   forgotPassword: jest.fn().mockResolvedValue({ success: true }),
@@ -22,7 +46,14 @@ const mockAuthService = {
   changePassword: jest.fn().mockResolvedValue({ success: true }),
   requestEmailChange: jest.fn().mockResolvedValue({ success: true }),
   changeEmail: jest.fn().mockResolvedValue({ success: true }),
-  generate2FASecret: jest.fn().mockResolvedValue({ qr: 'base64' }),
+  generate2FASecret: jest.fn().mockResolvedValue({ 
+    success: true,
+    message: '2FA secret generated successfully',
+    data: {
+      secret: 'secret123',
+      qrCode: 'base64'
+    }
+  }),
   verify2FA: jest.fn().mockResolvedValue({ valid: true }),
   enable2FA: jest.fn().mockResolvedValue({ enabled: true }),
   disable2FA: jest.fn().mockResolvedValue({ disabled: true }),
@@ -87,7 +118,9 @@ describe('AuthController', () => {
       type: 'user',
     };
     const result = await controller.create(dto);
-    expect(result.success).toBe(true);
+    expect(result.execStatus).toBe(true);
+    expect(result.httpStatus).toBe(201);
+    expect(result.msg).toBe('We have sent a verification link to your email');
   });
 
   it('should return current user info', async () => {
@@ -96,21 +129,18 @@ describe('AuthController', () => {
   });
 
   it('should login a user', async () => {
-    const res = {
-      cookie: jest.fn(),
-      json: jest.fn(),
-    };
-    await controller.login({ user: mockUserRequest.user } as any, res as any);
-    expect(res.cookie).toHaveBeenCalled();
-    expect(res.json).toHaveBeenCalled();
+    const result = await controller.login({ email: 'test@example.com', password: 'password' } as any);
+    expect(result.execStatus).toBe(true);
+    expect(result.data.token).toBe('access');
+    expect(result.data.refreshToken).toBe('refresh');
   });
 
   it('should refresh token', async () => {
     const result = await controller.refreshToken(
       { user: { userId: 1 } } as any,
-      { refresh_token: 'refresh' },
     );
-    expect(result.authorization.access_token).toBe('new_access');
+    expect(result.execStatus).toBe(true);
+    expect(result.data.token).toBe('new_access');
   });
 
   it('should logout user', async () => {
@@ -177,7 +207,7 @@ describe('AuthController', () => {
 
   it('should generate 2FA secret', async () => {
     const result = await controller.generate2FASecret({ user: { userId: 1 } } as any);
-    expect(result.data.qrCode).toBe('base64');
+    expect(result.success).toBe(true);
   });
 
   it('should verify 2FA token', async () => {

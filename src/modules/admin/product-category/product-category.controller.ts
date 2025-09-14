@@ -9,6 +9,7 @@ import { Roles } from 'src/common/guard/role/roles.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { ApiTags, ApiOperation, ApiConsumes, ApiBearerAuth } from '@nestjs/swagger';
+import { SkipTransform } from 'src/common/decorators/skip-transform.decorator';
 
 @ApiTags('Admin Product Categories')
 @ApiBearerAuth()
@@ -23,18 +24,21 @@ export class ProductCategoryController {
 
 
     @Get()
+    @SkipTransform()
     @ApiOperation({ summary: 'Get all product categories' })
     async getAllCategories() {
         return this.productCategoryService.getAllProductCategories();
     }
 
     @Get(':id')
+    @SkipTransform()
     @ApiOperation({ summary: 'Get product category by ID' })
     async getCategoryById(@Param('id') id: string) {
         return this.productCategoryService.getProductCategoryById(id);
     }
 
     @Post()
+    @SkipTransform()
     @ApiOperation({ summary: 'Create a new product category' })
     @ApiConsumes('multipart/form-data')
     @UseInterceptors(
@@ -54,6 +58,7 @@ export class ProductCategoryController {
     }
 
     @Patch(':id')
+    @SkipTransform()
     @ApiOperation({ summary: 'Update product category by ID' })
     @ApiConsumes('multipart/form-data')
     @UseInterceptors(
@@ -74,6 +79,7 @@ export class ProductCategoryController {
     }
 
     @Delete(':id')
+    @SkipTransform()
     @ApiOperation({ summary: 'Delete product category by ID' })
     async deleteCategoryById(@Param('id') id: string) {
         return this.productCategoryService.deleteProductCategoryById(id);
