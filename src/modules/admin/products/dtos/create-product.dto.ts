@@ -9,10 +9,10 @@ export class CreateProductDto {
     @IsString() 
     name: string;
 
-    @ApiProperty({ description: 'Product category', example: 'Ramen' })
+    @ApiProperty({ description: 'Product category ID', example: 'category-uuid-here' })
     @IsNotEmpty()
     @IsString()
-    category: string;
+    categoryId: string;
 
     @ApiProperty({ description: 'Product description', example: 'Rich pork bone broth ramen', required: false })
     @IsOptional()

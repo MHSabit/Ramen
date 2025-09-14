@@ -429,7 +429,6 @@ model Product {
   description String?
   price       Decimal   @db.Decimal(10, 2)
   quantity    Int       @default(0)
-  category    String?
   image       String?   // URL or path to the product image
   spice_level String?   // Spice level for ramen products
   features    String?   // Product features
@@ -441,6 +440,9 @@ model Product {
   // Relationship to order items (when this product is purchased)
   order_items OrderItem[]
 
+  categoryId  String?
+  category    ProductCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
   @@map("products")
 }
 
@@ -450,6 +452,8 @@ model ProductCategory {
   name        String    @unique
   description String?
   image       String?   // URL or path to the product image
+
+  products  Product[]
   created_at  DateTime  @default(now())
   updated_at  DateTime  @default(now())
   deleted_at  DateTime?

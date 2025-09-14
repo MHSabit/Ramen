@@ -234,7 +234,7 @@ export class AuthService {
     try {
       const payload = { email: email, sub: userId };
 
-      const accessToken = this.jwtService.sign(payload, { expiresIn: '1h' });
+      const accessToken = this.jwtService.sign(payload, { expiresIn: '1m' });
       const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
 
       const user = await UserRepository.getUserDetails(userId);
@@ -266,41 +266,56 @@ export class AuthService {
     }
   }
 
-  async refreshToken(user_id: string, refreshToken: string) {
+  async refreshToken(refreshToken: string) {
     try {
-      const storedToken = await this.redis.get(`refresh_token:${user_id}`);
-
-      if (!storedToken || storedToken != refreshToken) {
+      if (!refreshToken) {
         return {
           success: false,
           message: 'Refresh token is required',
-          data:null
+          data: null
         };
       }
+
+      // Verify and decode the refresh token
+      const decodedToken = this.jwtService.verify(refreshToken);
+      const user_id = decodedToken.sub;
 
       if (!user_id) {
         return {
           success: false,
-          message: 'User not found',
-          data:null
+          message: 'Invalid refresh token',
+          data: null
         };
       }
 
+      // Check if refresh token exists in Redis
+      const storedToken = await this.redis.get(`refresh_token:${user_id}`);
+
+      if (!storedToken || storedToken !== refreshToken) {
+        return {
+          success: false,
+          message: 'Invalid refresh token',
+          data: null
+        };
+      }
+
+      // Get user details
       const userDetails = await UserRepository.getUserDetails(user_id);
       if (!userDetails) {
         return {
           success: false,
           message: 'User not found',
-          data:null
+          data: null
         };
       }
 
+      // Generate new access token
       const payload = { email: userDetails.email, sub: userDetails.id };
       const accessToken = this.jwtService.sign(payload, { expiresIn: '1h' });
 
       return {
         success: true,
-        message: 'Refresh token refreshed successfully',
+        message: 'Access token refreshed successfully',
         authorization: {
           type: 'bearer',
           access_token: accessToken,
@@ -309,8 +324,8 @@ export class AuthService {
     } catch (error) {
       return {
         success: false,
-        message: error.message,
-        data:null
+        message: 'Invalid refresh token',
+        data: null
       };
     }
   }

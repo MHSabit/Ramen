@@ -139,19 +139,14 @@ export class AuthController {
   }
 
   @ApiOperation({ summary: 'Refresh token' })
-  @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
   @Post('refresh-token')
   async refreshToken(
-    @Req() req: Request,
     @Body() body: { refresh_token: string },
   ) {
     try {
-      const user_id = req.user.userId;
-
+      const refresh_token = body.refresh_token;
       const response = await this.authService.refreshToken(
-        user_id,
-        body.refresh_token,
+        refresh_token,
       );
 
       return response;
@@ -159,7 +154,7 @@ export class AuthController {
       return {
         success: false,
         message: error.message,
-        data:null
+        data: null
       };
     }
   }

@@ -11,10 +11,10 @@ export class UpdateProductDto extends PartialType(CreateProductDto) {
     @IsString() 
     name?: string;
 
-    @ApiProperty({ description: 'Product category', example: 'Ramen', required: false })
+    @ApiProperty({ description: 'Product category ID', example: 'category-uuid-here', required: false })
     @IsOptional()
     @IsString()
-    category?: string;
+    categoryId?: string;
 
     @ApiProperty({ description: 'Product description', example: 'Rich pork bone broth ramen', required: false })
     @IsOptional()

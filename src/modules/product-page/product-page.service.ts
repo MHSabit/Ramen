@@ -2,6 +2,7 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { CreateProductPageDto } from './dto/create-product-page.dto';
 import { UpdateProductPageDto } from './dto/update-product-page.dto';
 import { PrismaClient } from '@prisma/client';
+import appConfig from 'src/config/app.config';
 const prisma = new PrismaClient();
 
 @Injectable()
@@ -36,10 +37,18 @@ export class ProductPageService {
       const totalPages = Math.ceil(totalCount / limitNumber);
       const hasNextPage = pageNumber < totalPages;
       const hasPrevPage = pageNumber > 1;
+
+       // Add imageUrl to each category
+       const productPagesWithImageUrl = productPages.map(productPage => ({
+        ...productPage,
+        imageUrl: productPage.image ? `${appConfig().app.url}/public/storage/${productPage.image}` : null
+    }));
+
       return {
         success: true,
+        message: "Product pages fetched successfully",
         data: {
-          productPages,
+          productPagesWithImageUrl,
           pagination: {
             currentPage: pageNumber,
             totalPages,
@@ -63,36 +72,7 @@ export class ProductPageService {
     }
   }
 
-  // Get product page by id
-  async findOne(id: string) {
-    try {
-      const productPage = await prisma.product.findUnique({
-        where: {
-          id: id,
-        },
-      });
-      if(!productPage){
-        throw new HttpException({
-          success: false,
-          message: "Product page not found",
-        }, HttpStatus.NOT_FOUND);
-      }
-      return {
-        success: true,
-        message: "Product page fetched successfully",
-        data: productPage,
-      };
-    } catch (error) {
-      if(error instanceof HttpException){
-        throw error;
-      }else{
-        throw new HttpException({
-          success: false,
-          message: error.message,
-        }, HttpStatus.INTERNAL_SERVER_ERROR);
-      }
-    }
-  }
+ 
 }
 
 

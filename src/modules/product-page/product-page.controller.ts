@@ -16,13 +16,6 @@ export class ProductPageController {
     return this.productPageService.findAll(q, limit, page);
   }
 
-  // Get product page by id
-  // we have to get the product page by id
-  // @ApiOperation({ summary: 'Get product page by id' })
-  @Get(':id')
-  async findOne(@Param('id') id: string) {
-    return this.productPageService.findOne(id);
-  }
 
 
 }

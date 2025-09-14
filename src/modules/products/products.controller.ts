@@ -13,7 +13,6 @@ export class ProductsController {
     return this.productsService.findAll();
   }
 
-
   // get product by id
   @Get(':id')
   @ApiOperation({ summary: 'Get product by id' })
