@@ -389,18 +389,6 @@ export class AuthService {
         };
       }
 
-<<<<<<< HEAD
-      const fullName = first_name + ' ' + last_name;
-      console.log('fullname', fullName);
-
-      //create stripe customer account
-      const stripeCustomer = await StripePayment.createCustomer({
-        user_id: user.data.id,
-        email: email,
-        name: first_name,
-      });
-      console.log('stripeCustomer', stripeCustomer);
-=======
       // create stripe customer account
       const stripeCustomer = await StripePayment.createCustomer({
         user_id: user.data.id,
@@ -418,7 +406,6 @@ export class AuthService {
           },
         });
       }
->>>>>>> cart
 
       if (stripeCustomer) {
         const updateUser = await this.prisma.user.update({
@@ -441,7 +428,7 @@ export class AuthService {
       // send otp code to email
       await this.mailService.sendOtpCodeToEmail({
         email: email,
-        name: fullName,
+        name: first_name + ' ' + last_name,
         otp: token,
       });
 
@@ -471,19 +458,11 @@ export class AuthService {
         data:null
       };
     } catch (error) {
-<<<<<<< HEAD
-      console.log('error', error);
-        return {
-          success: false,
-          message: error.message,
-        };
-=======
       return {
         success: false,
         message: error.message,
         data:null
       };
->>>>>>> cart
     }
   }
 
