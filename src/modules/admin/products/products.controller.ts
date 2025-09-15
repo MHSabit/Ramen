@@ -10,13 +10,18 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { ApiTags, ApiOperation, ApiConsumes, ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiTags('Admin Products')
+@ApiBearerAuth()
 @Controller('admin/products')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(Role.ADMIN)
 export class ProductsController {
 
     constructor(
         private readonly productService: ProductsService
     ) {}
     
+
     // get all the product 
     // we have to implement the pagination and the limit and the search using by the name of the product
     @Get()
@@ -42,12 +47,7 @@ export class ProductsController {
     }
 
 
-
     // get product by id
-    // @ApiTags('Admin Products')
-    // @ApiBearerAuth()
-    // @UseGuards(JwtAuthGuard, RolesGuard)
-    // @Roles(Role.ADMIN)
     @Get(':id')
     @ApiOperation({ summary: 'Get product by ID' })
     async getProductById(@Param('id') id: string) {
@@ -56,12 +56,7 @@ export class ProductsController {
 
 
 
-
     // create product
-    @ApiTags('Admin Products')
-    @ApiBearerAuth()
-    @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(Role.ADMIN)
     @Post('/add-product')
     @ApiOperation({ summary: 'Create a new product' })
     @ApiConsumes('multipart/form-data')
@@ -83,12 +78,8 @@ export class ProductsController {
 
 
 
-    
+
     // update product by id
-    @ApiTags('Admin Products')
-    @ApiBearerAuth()
-    @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(Role.ADMIN)
     @Patch(':id')
     @ApiOperation({ summary: 'Update product by ID' })
     @ApiConsumes('multipart/form-data')
@@ -110,14 +101,6 @@ export class ProductsController {
     }
 
 
-
-
-
-    // delete product by id
-    @ApiTags('Admin Products')
-    @ApiBearerAuth()
-    @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(Role.ADMIN)
     @Delete(':id')
     @ApiOperation({ summary: 'Delete product by ID' })
     async deleteProductById(@Param('id') id: string) {

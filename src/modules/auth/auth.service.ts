@@ -389,18 +389,6 @@ export class AuthService {
         };
       }
 
-<<<<<<< HEAD
-      const fullName = first_name + ' ' + last_name;
-      console.log('fullname', fullName);
-
-      //create stripe customer account
-      const stripeCustomer = await StripePayment.createCustomer({
-        user_id: user.data.id,
-        email: email,
-        name: first_name,
-      });
-      console.log('stripeCustomer', stripeCustomer);
-=======
       // create stripe customer account
       const stripeCustomer = await StripePayment.createCustomer({
         user_id: user.data.id,
@@ -418,41 +406,30 @@ export class AuthService {
           },
         });
       }
->>>>>>> cart
 
-      if (stripeCustomer) {
-        const updateUser = await this.prisma.user.update({
-          where: {
-            id: user.data.id,
-          },
-          data: {
-            billing_id: stripeCustomer.id,
-          },
-        });
-        console.log('updateUser', updateUser);
-      }
+      // ----------------------------------------------------
+      // // create otp code
+      // const token = await UcodeRepository.createToken({
+      //   userId: user.data.id,
+      //   isOtp: true,
+      // });
 
-      // create otp code
-      const token = await UcodeRepository.createToken({
-        userId: user.data.id,
-        isOtp: true,
-      });
+      // // send otp code to email
+      // await this.mailService.sendOtpCodeToEmail({
+      //   email: email,
+      //   name: name,
+      //   otp: token,
+      // });
 
-      // send otp code to email
-      await this.mailService.sendOtpCodeToEmail({
-        email: email,
-        name: fullName,
-        otp: token,
-      });
+      // return {
+      //   success: true,
+      //   message: 'We have sent an OTP code to your email',
+      // };
 
-      return {
-        success: true,
-        message: 'We have sent an OTP code to your email',
-      };
-
+      // ----------------------------------------------------
 
       // Generate verification token
-      const tokens = await UcodeRepository.createVerificationToken({
+      const token = await UcodeRepository.createVerificationToken({
         userId: user.data.id,
         email: email,
       });
@@ -461,7 +438,7 @@ export class AuthService {
       await this.mailService.sendVerificationLink({
         email,
         name: email,
-        token: tokens.token,
+        token: token.token,
         type: type,
       });
 
@@ -471,19 +448,11 @@ export class AuthService {
         data:null
       };
     } catch (error) {
-<<<<<<< HEAD
-      console.log('error', error);
-        return {
-          success: false,
-          message: error.message,
-        };
-=======
       return {
         success: false,
         message: error.message,
         data:null
       };
->>>>>>> cart
     }
   }
 
