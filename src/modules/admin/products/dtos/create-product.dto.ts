@@ -10,8 +10,8 @@ export class CreateProductDto {
     name: string;
 
     @ApiProperty({ description: 'Product category ID', example: 'category-uuid-here' })
-    @IsNotEmpty()
     @IsString()
+    @IsOptional()
     categoryId: string;
 
     @ApiProperty({ description: 'Product description', example: 'Rich pork bone broth ramen', required: false })

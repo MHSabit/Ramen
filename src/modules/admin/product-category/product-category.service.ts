@@ -225,11 +225,33 @@ export class ProductCategoryService {
                 where: { id },
             });
 
+            // check  for the associated product in the product table 
             if (!category) {
                 throw new HttpException({
                     success: false,
                     message: "Product category not found",
                 }, HttpStatus.NOT_FOUND);
+            }
+
+            const product = await prisma.product.findMany({
+                where: {
+                    category: {
+                        id: id,
+                    },
+                },
+            });
+            console.log('product', product);
+            for(const p of product){
+                console.log('p', p);
+                await prisma.product.update({
+                    where: {
+                        id: p.id,
+                    },
+                    data: {
+                        categoryId: null,
+                    },
+                });
+                console.log('deleted product', p.id);
             }
 
             // Delete associated image if exists

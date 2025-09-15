@@ -137,11 +137,11 @@ export class ProductsService {
                     description: product.description,
                     price: product.price,
                     image: imageUrl,
-                    categoryId: product.categoryId,
                     quantity: product.quantity || 0,
                     spice_level: product.spice_level,
                     features: product.features,
                     popular: product.popular || false,
+                    ...(product.categoryId !== undefined && { categoryId: product.categoryId }),
                 },
             });
             return {
