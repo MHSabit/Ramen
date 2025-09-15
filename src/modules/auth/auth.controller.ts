@@ -91,6 +91,10 @@ export class AuthController {
         type: type,
       });
 
+<<<<<<< HEAD
+      console.log('Inside register ' ,response);
+=======
+>>>>>>> cart
 
       return response;
     } catch (error) {
