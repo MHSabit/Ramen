@@ -44,7 +44,58 @@ export class TransactionRepository {
   }
 
   /**
-   * Update transaction
+   * Update transaction by ID
+   * @returns
+   */
+  static async updateTransactionById({
+    id,
+    reference_number,
+    status = 'pending',
+    paid_amount,
+    paid_currency,
+    raw_status,
+  }: {
+    id: string;
+    reference_number?: string;
+    status?: string;
+    paid_amount?: number;
+    paid_currency?: string;
+    raw_status?: string;
+  }) {
+    const data = {};
+    const order_data = {};
+    if (status) {
+      data['status'] = status;
+      order_data['payment_status'] = status;
+    }
+    if (paid_amount) {
+      data['paid_amount'] = Number(paid_amount);
+      order_data['paid_amount'] = Number(paid_amount);
+    }
+    if (paid_currency) {
+      data['paid_currency'] = paid_currency;
+      order_data['paid_currency'] = paid_currency;
+    }
+    if (raw_status) {
+      data['raw_status'] = raw_status;
+      order_data['payment_raw_status'] = raw_status;
+    }
+    if (reference_number) {
+      data['reference_number'] = reference_number;
+    }
+
+    return await prisma.paymentTransaction.update({
+      where: {
+        id: id,
+      },
+      data: {
+        ...data,
+      },
+    });
+  }
+
+  /**
+   * Update transaction by reference number
    * @returns
    */
   static async updateTransaction({
@@ -78,7 +129,7 @@ export class TransactionRepository {
       data['raw_status'] = raw_status;
       order_data['payment_raw_status'] = raw_status;
     }
-
+    // console.log('reference_number', reference_number);
     const paymentTransaction = await prisma.paymentTransaction.findMany({
       where: {
         reference_number: reference_number,
@@ -96,7 +147,8 @@ export class TransactionRepository {
     //     },
     //   });
     // }
-
+    // console.log('data', data);
+    // console.log('paymentTransaction', paymentTransaction);
     return await prisma.paymentTransaction.updateMany({
       where: {
         reference_number: reference_number,

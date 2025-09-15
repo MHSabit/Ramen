@@ -1,4 +1,4 @@
-import { Controller, Post, Req, Headers, Body, UseGuards, Get } from '@nestjs/common';
+import { Controller, Post, Req, Headers, Body, UseGuards, Get, UseInterceptors, ClassSerializerInterceptor } from '@nestjs/common';
 import { StripeService } from './stripe.service';
 import { Request } from 'express';
 import { TransactionRepository } from '../../../common/repository/transaction/transaction.repository';
@@ -9,6 +9,7 @@ import { CreatePaymentDto } from './dto/create-payment.dto';
 import { PrismaService } from '../../../prisma/prisma.service';
 
 @Controller('payment/stripe')
+@UseInterceptors(ClassSerializerInterceptor)
 export class StripeController {
   constructor(
     private readonly stripeService: StripeService,
@@ -190,41 +191,47 @@ export class StripeController {
     @Req() req: Request,
   ) {
     try {
-      const payload = req.rawBody.toString();
+      // Validate signature presence
+      if (!signature) {
+        // console.error('Missing Stripe signature');
+        return { received: false, error: 'Missing signature' };
+      }
+
+      const payload = req.rawBody?.toString();
+      if (!payload) {
+        // console.error('Missing webhook payload');
+        return { received: false, error: 'Missing payload' };
+      }
+
       const event = await this.stripeService.handleWebhook(payload, signature);
 
       // Handle events
       switch (event.type) {
         case 'customer.created':
           break;
-        case 'payment_intent.created':
-          break;
-        case 'payment_intent.succeeded':
-          console.log('payment_intent.succeeded');
-          const paymentIntent = event.data.object;
-          console.log('paymentIntent', paymentIntent);
-          console.log('paymentIntent metadata', paymentIntent.metadata);
+        case 'checkout.session.completed':
+          const session = event.data.object;
+          // console.log('Checkout session completed:', session.id);
           
-          // Extract user information from metadata
-          const userId = paymentIntent.metadata?.user_id;
-          console.log('userId', userId);
-          const transactionId = paymentIntent.metadata?.transaction_id;
-          console.log('transactionId', transactionId);
-          const products = paymentIntent.metadata?.products;
-          console.log('products', products);
-          
-          if (userId && transactionId) {
-            console.log(`Payment succeeded for user: ${userId}, transaction: ${transactionId}`);
-            if (products) {
-              try {
-                const productsList = JSON.parse(products);
-                console.log(`Products purchased:`, productsList);
-              } catch (e) {
-                console.log(`Products metadata: ${products}`);
-              }
-            }
+          // Check if transaction already processed (idempotency)
+          const existingTransaction = await TransactionRepository.getTransactionByReference(session.id);
+          if (existingTransaction && existingTransaction.status === 'succeeded') {
+            // console.log('Transaction already processed:', session.id);
+            break;
           }
           
+          // Update transaction status in database
+          await TransactionRepository.updateTransaction({
+            reference_number: session.id,
+            status: 'succeeded',
+            paid_amount: session.amount_total / 100, // amount in dollars
+            paid_currency: session.currency,
+            raw_status: session.payment_status,
+          });
+          break;
+        case 'payment_intent.succeeded':
+          const paymentIntent = event.data.object;
+          // console.log('Payment intent succeeded:', paymentIntent.id);
           // Update transaction status in database
           await TransactionRepository.updateTransaction({
             reference_number: paymentIntent.id,
@@ -236,15 +243,7 @@ export class StripeController {
           break;
         case 'payment_intent.payment_failed':
           const failedPaymentIntent = event.data.object;
-          
-          // Extract user information from metadata
-          const failedUserId = failedPaymentIntent.metadata?.user_id;
-          const failedTransactionId = failedPaymentIntent.metadata?.transaction_id;
-          
-          if (failedUserId && failedTransactionId) {
-            console.log(`Payment failed for user: ${failedUserId}, transaction: ${failedTransactionId}`);
-          }
-          
+          // console.log('Payment intent failed:', failedPaymentIntent.id);
           // Update transaction status in database
           await TransactionRepository.updateTransaction({
             reference_number: failedPaymentIntent.id,
@@ -254,15 +253,7 @@ export class StripeController {
           break;
         case 'payment_intent.canceled':
           const canceledPaymentIntent = event.data.object;
-          
-          // Extract user information from metadata
-          const canceledUserId = canceledPaymentIntent.metadata?.user_id;
-          const canceledTransactionId = canceledPaymentIntent.metadata?.transaction_id;
-          
-          if (canceledUserId && canceledTransactionId) {
-            console.log(`Payment canceled for user: ${canceledUserId}, transaction: ${canceledTransactionId}`);
-          }
-          
+          // console.log('Payment intent canceled:', canceledPaymentIntent.id);
           // Update transaction status in database
           await TransactionRepository.updateTransaction({
             reference_number: canceledPaymentIntent.id,
@@ -272,15 +263,7 @@ export class StripeController {
           break;
         case 'payment_intent.requires_action':
           const requireActionPaymentIntent = event.data.object;
-          
-          // Extract user information from metadata
-          const actionUserId = requireActionPaymentIntent.metadata?.user_id;
-          const actionTransactionId = requireActionPaymentIntent.metadata?.transaction_id;
-          
-          if (actionUserId && actionTransactionId) {
-            console.log(`Payment requires action for user: ${actionUserId}, transaction: ${actionTransactionId}`);
-          }
-          
+          // console.log('Payment intent requires action:', requireActionPaymentIntent.id);
           // Update transaction status in database
           await TransactionRepository.updateTransaction({
             reference_number: requireActionPaymentIntent.id,
@@ -290,19 +273,19 @@ export class StripeController {
           break;
         case 'payout.paid':
           const paidPayout = event.data.object;
-          console.log(paidPayout);
+          // console.log(paidPayout);
           break;
         case 'payout.failed':
           const failedPayout = event.data.object;
-          console.log(failedPayout);
+          // console.log(failedPayout);
           break;
         default:
-          console.log(`Unhandled event type ${event.type}`);
+          // console.log(`Unhandled event type ${event.type}`);
       }
 
       return { received: true };
     } catch (error) {
-      console.error('Webhook error', error);
+      // console.error('Webhook error', error);
       return { received: false };
     }
   }
