@@ -38,6 +38,7 @@ model User {
   deleted_at DateTime?
   status     Int?      @default(1) @db.SmallInt
 
+
   approved_at  DateTime?
   availability String?
   email        String? @unique   // ✅ add this line
