@@ -90,12 +90,7 @@ export class AuthController {
         password: password,
         type: type,
       });
-
-<<<<<<< HEAD
-      console.log('Inside register ' ,response);
-=======
->>>>>>> cart
-
+      
       return response;
     } catch (error) {
       return {
