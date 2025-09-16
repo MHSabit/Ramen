@@ -428,7 +428,11 @@ export class AuthService {
       // send otp code to email
       await this.mailService.sendOtpCodeToEmail({
         email: email,
+<<<<<<< HEAD
         name: stripeCustomer.name,
+=======
+        name: first_name + ' ' + last_name,
+>>>>>>> 2864b31060bd332f63a13046e06b2877b1e677f2
         otp: token,
       });
 
