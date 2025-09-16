@@ -437,26 +437,26 @@ export class AuthService {
         message: 'We have sent an OTP code to your email',
       };
 
+      // Commented out since this code path is never reached
+      // // Generate verification token
+      // const tokens = await UcodeRepository.createVerificationToken({
+      //   userId: user.data.id,
+      //   email: email,
+      // });
 
-      // Generate verification token
-      const tokens = await UcodeRepository.createVerificationToken({
-        userId: user.data.id,
-        email: email,
-      });
+      // // Send verification email with token
+      // await this.mailService.sendVerificationLink({
+      //   email,
+      //   name: email,
+      //   token: tokens.token,
+      //   type: type,
+      // });
 
-      // Send verification email with token
-      await this.mailService.sendVerificationLink({
-        email,
-        name: email,
-        token: tokens.token,
-        type: type,
-      });
-
-      return {
-        success: true,
-        message: 'We have sent a verification link to your email',
-        data:null
-      };
+      // return {
+      //   success: true,
+      //   message: 'We have sent a verification link to your email',
+      //   data:null
+      // };
     } catch (error) {
       return {
         success: false,
