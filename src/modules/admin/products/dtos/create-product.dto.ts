@@ -12,9 +12,9 @@ import {
     name: string;
 
     @ApiProperty({ description: 'Product category ID', example: 'category-uuid-here' })
-    @IsNotEmpty()
     @IsString()
-    categoryId: string;
+    @IsOptional()
+    categoryId?: string;
 
     @ApiProperty({ description: 'Product description', example: 'Rich pork bone broth ramen', required: false })
     @IsNotEmpty()

@@ -39,20 +39,9 @@ export class AuthController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Get('me')
-  async me(@Req() req: Request) {
-    try {
-      const user_id = req.user.userId;
-
-      const response = await this.authService.me(user_id);
-
-      return response;
-    } catch (error) {
-      return {
-        success: false,
-        message: 'Failed to fetch user details',
-        data:null
-      };
-    }
+  async me(@Req() req: Request): Promise<ApiResponse> {
+    const user_id = req.user.userId;
+    return this.authService.me(user_id);
   }
 
   @ApiOperation({ summary: 'Register a user' })

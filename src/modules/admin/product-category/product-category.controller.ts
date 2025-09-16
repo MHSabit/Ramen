@@ -79,7 +79,6 @@ export class ProductCategoryController {
     }
 
     @Delete(':id')
-    @SkipTransform()
     @ApiOperation({ summary: 'Delete product category by ID' })
     async deleteCategoryById(@Param('id') id: string) {
         return this.productCategoryService.deleteProductCategoryById(id);

@@ -63,7 +63,6 @@ export class ProductsController {
 
     // create product
     @Post('/add-product')
-    @SkipTransform()
     @ApiOperation({ summary: 'Create a new product' })
     @ApiConsumes('multipart/form-data')
     @UseInterceptors(

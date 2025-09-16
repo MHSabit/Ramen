@@ -139,16 +139,6 @@ export class ProductsService {
                 imageUrl = await this.fileUploadService.uploadProductImage(product.image);
             }
 
-            // Validate category exists to avoid FK violation
-            const category = await prisma.productCategory.findUnique({
-                where: { id: product.categoryId },
-            });
-            if (!category) {
-                return ApiResponseHelper.badRequest(
-                    "Invalid categoryId",
-                    "INVALID_CATEGORY_ID"
-                );
-            }
 
             const save = await prisma.product.create({
                 data: {
@@ -156,13 +146,12 @@ export class ProductsService {
                     description: product.description,
                     price: product.price,
                     image: imageUrl,
-                    // use relation connect for clarity and FK safety
-                    category: { connect: { id: product.categoryId } },
                     quantity: product.quantity || 0,
                     spice_level: product.spice_level,
                     features: product.features,
                     original_price: product.original_price ?? null,
                     popular: product.popular || false,
+                    ...(product.categoryId !== undefined && { categoryId: product.categoryId }),
                 },
             });
 

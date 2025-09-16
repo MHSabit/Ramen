@@ -29,7 +29,7 @@ export class AuthService {
     @InjectRedis() private readonly redis: Redis,
   ) {}
 
-  async me(userId: string) {
+  async me(userId: string): Promise<ApiResponse> {
     try {
       const user = await this.prisma.user.findFirst({
         where: {
@@ -47,15 +47,12 @@ export class AuthService {
           gender: true,
           date_of_birth: true,
           created_at: true,
+          cart_id: true,
         },
       });
 
       if (!user) {
-        return {
-          success: false,
-          message: 'User not found',
-          data:null
-        };
+        return ApiResponseHelper.notFound('User not found', 'USER_NOT_FOUND');
       }
 
       if (user.avatar) {
@@ -64,25 +61,18 @@ export class AuthService {
         );
       }
 
-      if (user) {
-        return {
-          success: true,
-          message: 'User fetched successfully',
-          data: user,
-        };
-      } else {
-        return {
-          success: false,
-          message: 'User not found',
-          data:null
-        };
-      }
+      return ApiResponseHelper.success(
+        user,
+        'User fetched successfully',
+        HttpStatus.OK,
+        'USER_FETCH_SUCCESS'
+      );
     } catch (error) {
-      return {
-        success: false,
-        message: error.message,
-        data:null
-      };
+      return ApiResponseHelper.error(
+        error.message || 'Failed to fetch user details',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        'USER_FETCH_ERROR'
+      );
     }
   }
 

@@ -159,7 +159,7 @@ describe('AuthController', () => {
 
   it('should handle forgot password', async () => {
     const result = await controller.forgotPassword({ email: 'john@example.com' });
-    expect(result.success).toBe(true);
+    expect(result?.data?.execStatus).toBe(true);
   });
 
   it('should verify email', async () => {
