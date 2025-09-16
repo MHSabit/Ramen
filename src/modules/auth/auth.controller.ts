@@ -90,12 +90,7 @@ export class AuthController {
         password: password,
         type: type,
       });
-<<<<<<< HEAD
-      
-=======
 
-
->>>>>>> 2864b31060bd332f63a13046e06b2877b1e677f2
       return response;
     } catch (error) {
       return {
