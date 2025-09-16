@@ -236,6 +236,7 @@ export class AuthService {
 
   async login(loginDto: AuthEmailLoginDto): Promise<ApiResponse> {
     try {
+      console.log("loginDto", loginDto.email);
       const user = await UserRepository.getUserDetailsByEmail(loginDto.email);
       console.log("user", user);
       console.log("loginDto", loginDto);
@@ -261,6 +262,7 @@ export class AuthService {
         loginDto.password,
         user.password,
       );
+      console.log("isValidPassword", isValidPassword);
   
       if (!isValidPassword) {
         throw new UnprocessableEntityException({
@@ -563,43 +565,40 @@ export class AuthService {
     }
   }
 
-  async forgotPassword(email) {
+  async forgotPassword(email: string): Promise<ApiResponse> {
     try {
       const user = await UserRepository.exist({
         field: 'email',
         value: email,
       });
 
-      if (user) {
-        const token = await UcodeRepository.createToken({
-          userId: user.id,
-          isOtp: true,
-        });
-
-        await this.mailService.sendOtpCodeToEmail({
-          email: email,
-          name: user.name,
-          otp: token,
-        });
-
-        return {
-          success: true,
-          message: 'We have sent an OTP code to your email',
-          data:null
-        };
-      } else {
-        return {
-          success: false,
-          message: 'Email not found',
-          data:null
-        };
+      if (!user) {
+        return ApiResponseHelper.notFound('Email not found', 'EMAIL_NOT_FOUND');
       }
+
+      const token = await UcodeRepository.createToken({
+        userId: user.id,
+        isOtp: true,
+      });
+
+      await this.mailService.sendOtpCodeToEmail({
+        email: email,
+        name: user.name,
+        otp: token,
+      });
+
+      return ApiResponseHelper.success(
+        null,
+        'We have sent an OTP code to your email',
+        HttpStatus.OK,
+        'OTP_SENT'
+      );
     } catch (error) {
-      return {
-        success: false,
-        message: error.message,
-        data:null
-      };
+      return ApiResponseHelper.error(
+        error.message || 'Something went wrong',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        'FORGOT_PASSWORD_ERROR'
+      );
     }
   }
 

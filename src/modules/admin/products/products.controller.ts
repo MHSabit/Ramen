@@ -75,9 +75,6 @@ export class ProductsController {
         @Body() product: CreateProductDto,
         @UploadedFile() image?: Express.Multer.File
     ) {
-        console.log(product);
-        console.log(image);
-        // Add the uploaded file to the product data
         if (image) {
             product.image = image;
         }
@@ -103,6 +100,8 @@ export class ProductsController {
         @UploadedFile() image?: Express.Multer.File
     ) {
         // Add the uploaded file to the product data
+        console.log("product", product);
+
         if (image) {
             product.image = image;
         }

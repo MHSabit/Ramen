@@ -1,5 +1,6 @@
 import { HttpStatus } from '@nestjs/common';
 import { ApiResponse } from '../../types/api-response.type';
+import { PaginatedAPIResponse } from '../../types/api-response-v2.type';
 
 export class ApiResponseHelper {
   static success<T>(
@@ -65,5 +66,24 @@ export class ApiResponseHelper {
     customCode: string | null = 'UNPROCESSABLE_ENTITY',
   ): ApiResponse {
     return this.error(msg, HttpStatus.UNPROCESSABLE_ENTITY, customCode);
+  }
+
+  static paginated<T>(
+    rows: T[],
+    count: number,
+    msg: string = 'Success',
+    httpStatus: number = HttpStatus.OK,
+    customCode: string | null = null,
+  ): PaginatedAPIResponse<T> {
+    return {
+      execStatus: true,
+      httpStatus,
+      msg,
+      customCode,
+      data: {
+        rows,
+        count,
+      },
+    };
   }
 }

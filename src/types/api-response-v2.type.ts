@@ -1,13 +1,6 @@
-export interface APIResponse<T> {
-  msg: string[];
-  custom_code: string | null;
-  error: boolean;
-  status: number;
-  data: T | null;
-  errorDetails?: string;
-}
+import { ApiResponse } from './api-response.type';
 
-export type PaginatedAPIResponse<T> = APIResponse<{
+export type PaginatedAPIResponse<T> = ApiResponse<{
   rows: T[];
   count: number;
 }>;

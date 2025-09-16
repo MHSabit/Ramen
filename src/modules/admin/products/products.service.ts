@@ -5,8 +5,9 @@ import { UpdateProductDto } from './dtos/update-product.dtos';
 import { FileUploadService } from './services/file-upload.service';
 import appConfig from 'src/config/app.config';
 import { Http2ServerRequest } from 'http2';
-import { APIResponse, PaginatedAPIResponse } from '../../../types/api-response-v2.type';
-import { APIResponseHelper } from '../../../common/helpers/api-response-v2.helper';
+import { ApiResponse } from '../../../types/api-response.type';
+import { PaginatedAPIResponse } from '../../../types/api-response-v2.type';
+import { ApiResponseHelper } from '../../../common/helpers/api-response.helper';
 
 const prisma = new PrismaClient();
 
@@ -38,6 +39,14 @@ export class ProductsService {
                 where: where_condition,
                 take: limit,
                 skip: skip,
+                include: {
+                    category: {
+                        select: {
+                            id: true,
+                            name: true,
+                        },
+                    },
+                },
                 orderBy: {
                     created_at: 'desc' // Order by newest first
                 }
@@ -51,11 +60,11 @@ export class ProductsService {
             // Transform products with image URLs
             const productsWithImageUrl = products.map(product => ({
                 ...product,
+                category: product.category,
                 imageUrl: product.image ? `${appConfig().app.url}/public/storage/${product.image}` : null
             }));
-            console.log("productsWithImageUrl", productsWithImageUrl);
 
-            return APIResponseHelper.paginated(
+            return ApiResponseHelper.paginated(
                 productsWithImageUrl,
                 totalCount,
                 "Products data fetch successful",
@@ -66,7 +75,7 @@ export class ProductsService {
             if(error instanceof HttpException){
                 throw error;
             }else{
-                return APIResponseHelper.error(
+                return ApiResponseHelper.error(
                     error.message || 'Failed to fetch products',
                     HttpStatus.INTERNAL_SERVER_ERROR,
                     'PRODUCTS_FETCH_ERROR'
@@ -76,10 +85,10 @@ export class ProductsService {
     }
 
     // get product by id
-    async getProductById(id: string): Promise<APIResponse<any>> {
+    async getProductById(id: string): Promise<ApiResponse<any>> {
         try {
             if(!id){
-                return APIResponseHelper.badRequest(
+                return ApiResponseHelper.badRequest(
                     "Product ID is required",
                     "PRODUCT_ID_REQUIRED"
                 );
@@ -92,7 +101,7 @@ export class ProductsService {
             });
             
             if (!product) {
-                return APIResponseHelper.notFound(
+                return ApiResponseHelper.notFound(
                     "Product not found",
                     "PRODUCT_NOT_FOUND"
                 );
@@ -103,14 +112,14 @@ export class ProductsService {
                 imageUrl: product.image ? `${appConfig().app.url}/public/storage/product_image/${product.image.split('/').pop()}` : null
             };
 
-            return APIResponseHelper.success(
+            return ApiResponseHelper.success(
                 productWithImageUrl,
                 "Product fetched successfully",
                 HttpStatus.OK,
                 "PRODUCT_FETCH_SUCCESS"
             );
         } catch (error) {
-            return APIResponseHelper.error(
+            return ApiResponseHelper.error(
                 error.message || 'Failed to fetch product',
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 'PRODUCT_FETCH_ERROR'
@@ -121,7 +130,7 @@ export class ProductsService {
 
 
     // create product
-    async createProduct(product: CreateProductDto): Promise<APIResponse<any>> {
+    async createProduct(product: CreateProductDto): Promise<ApiResponse<any>> {
         try {
             let imageUrl = null;
             
@@ -130,16 +139,29 @@ export class ProductsService {
                 imageUrl = await this.fileUploadService.uploadProductImage(product.image);
             }
 
+            // Validate category exists to avoid FK violation
+            const category = await prisma.productCategory.findUnique({
+                where: { id: product.categoryId },
+            });
+            if (!category) {
+                return ApiResponseHelper.badRequest(
+                    "Invalid categoryId",
+                    "INVALID_CATEGORY_ID"
+                );
+            }
+
             const save = await prisma.product.create({
                 data: {
                     name: product.name,
                     description: product.description,
                     price: product.price,
                     image: imageUrl,
-                    categoryId: product.categoryId,
+                    // use relation connect for clarity and FK safety
+                    category: { connect: { id: product.categoryId } },
                     quantity: product.quantity || 0,
                     spice_level: product.spice_level,
                     features: product.features,
+                    original_price: product.original_price ?? null,
                     popular: product.popular || false,
                 },
             });
@@ -149,14 +171,14 @@ export class ProductsService {
                 imageUrl: save.image ? `${appConfig().app.url}/public/storage/${save.image.split('/').pop()}` : null
             };
 
-            return APIResponseHelper.success(
+            return ApiResponseHelper.success(
                 productWithImageUrl,
                 "Product created successfully",
                 HttpStatus.CREATED,
                 "PRODUCT_CREATE_SUCCESS"
             );
         } catch (error) {
-            return APIResponseHelper.error(
+            return ApiResponseHelper.error(
                 error.message || 'Failed to create product',
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 'PRODUCT_CREATE_ERROR'
@@ -164,10 +186,10 @@ export class ProductsService {
         }
     }
 
-    async updateProductById(id: string, product: UpdateProductDto): Promise<APIResponse<any>> {
+    async updateProductById(id: string, product: UpdateProductDto): Promise<ApiResponse<Product>> {
         try {
             if (!id) {
-                return APIResponseHelper.badRequest(
+                return ApiResponseHelper.badRequest(
                     "Invalid product ID",
                     "INVALID_PRODUCT_ID"
                 );
@@ -179,13 +201,14 @@ export class ProductsService {
             });
 
             if (!existingProduct) {
-                return APIResponseHelper.notFound(
+                return ApiResponseHelper.notFound(
                     "Product not found",
                     "PRODUCT_NOT_FOUND"
                 );
             }
 
             // Build updateData object dynamically
+            console.log("product", product);
             const updateData: any = {};
             if (product.name !== undefined) updateData.name = product.name;
             if (product.description !== undefined) updateData.description = product.description;
@@ -195,6 +218,7 @@ export class ProductsService {
             if (product.spice_level !== undefined) updateData.spice_level = product.spice_level;
             if (product.features !== undefined) updateData.features = product.features;
             if (product.popular !== undefined) updateData.popular = product.popular;
+            if (product.original_price !== undefined) updateData.original_price = product.original_price;
 
             // Handle image upload if new image is provided
             if (product.image) {
@@ -219,14 +243,14 @@ export class ProductsService {
                 imageUrl: updatedProduct.image ? `${appConfig().app.url}/public/storage/product_image/${updatedProduct.image.split('/').pop()}` : null
             };
 
-            return APIResponseHelper.success(
+            return ApiResponseHelper.success(
                 productWithImageUrl,
                 "Product updated successfully",
                 HttpStatus.OK,
                 "PRODUCT_UPDATE_SUCCESS"
             );
         } catch (error) {
-            return APIResponseHelper.error(
+            return ApiResponseHelper.error(
                 error.message || 'Failed to update product',
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 'PRODUCT_UPDATE_ERROR'
@@ -235,10 +259,10 @@ export class ProductsService {
     }
 
 
-    async deleteProductById(id: string): Promise<APIResponse<null>> {
+    async deleteProductById(id: string): Promise<ApiResponse<null>> {
         try {
             if (!id) {
-                return APIResponseHelper.badRequest(
+                return ApiResponseHelper.badRequest(
                     "Invalid product ID",
                     "INVALID_PRODUCT_ID"
                 );
@@ -250,7 +274,7 @@ export class ProductsService {
             });
 
             if (!product) {
-                return APIResponseHelper.notFound(
+                return ApiResponseHelper.notFound(
                     "Product not found",
                     "PRODUCT_NOT_FOUND"
                 );
@@ -266,14 +290,14 @@ export class ProductsService {
                 where: { id },
             });
 
-            return APIResponseHelper.success(
+            return ApiResponseHelper.success(
                 null,
                 "Product deleted successfully",
                 HttpStatus.OK,
                 "PRODUCT_DELETE_SUCCESS"
             );
         } catch (error) {
-            return APIResponseHelper.error(
+            return ApiResponseHelper.error(
                 error.message || 'Failed to delete product',
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 'PRODUCT_DELETE_ERROR'

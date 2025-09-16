@@ -17,14 +17,20 @@ import {
     categoryId: string;
 
     @ApiProperty({ description: 'Product description', example: 'Rich pork bone broth ramen', required: false })
-    @IsOptional()
+    @IsNotEmpty()
     @IsString()
-    description?: string;
+    description: string;
   
     @ApiProperty({ description: 'Product price', example: '12.99' })
     @Type(() => Number)
     @IsNumber()
     price: number;
+
+    @ApiPropertyOptional({ description: 'Product original price', example: '12.99' })
+    @IsOptional()
+    @Type(() => Number)
+    @IsNumber()
+    original_price?: number;
   
     @ApiPropertyOptional({ description: 'Product image file', type: 'string', format: 'binary' })
     @IsOptional()
@@ -32,7 +38,7 @@ import {
   
     @ApiPropertyOptional({ description: 'Product quantity', example: '50' })
     @Type(() => Number)
-    @IsOptional()
+    @IsNotEmpty()
     @IsInt()
     @Min(0)
     quantity?: number;
@@ -58,4 +64,6 @@ import {
     @IsBoolean()
     @Transform(({ value }) => value === 'true' || value === true)
     popular?: boolean = false;
+
+   
   }

@@ -91,7 +91,6 @@ export class AuthController {
   @ApiOperation({ summary: 'Login user' })
   @Post('login')
   async login(@Body() loginDto: AuthEmailLoginDto): Promise<ApiResponse> {
-    
     return this.authService.login(loginDto);
   }
 
@@ -198,6 +197,7 @@ export class AuthController {
   @Post('forgot-password')
   async forgotPassword(@Body() data: { email: string }) {
     try {
+      console.log("data", data);
       const email = data.email;
       if (!email) {
         throw new HttpException('Email not provided', HttpStatus.UNAUTHORIZED);

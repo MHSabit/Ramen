@@ -22,10 +22,15 @@ export class UpdateProductDto extends PartialType(CreateProductDto) {
     description?: string;
 
     @ApiProperty({ description: 'Product price', example: '12.99', required: false })
+    @Transform(({ value }) => value ? parseFloat(value) : undefined)
+    @IsNumber()
+    price: number;
+
+    @ApiProperty({ description: 'Product original price', example: '12.99' })
     @IsOptional()
     @Transform(({ value }) => value ? parseFloat(value) : undefined)
     @IsNumber()
-    price?: number;
+    original_price?: number;
 
     @ApiProperty({ description: 'Product image file', type: 'string', format: 'binary', required: false })
     @IsOptional()
@@ -33,9 +38,9 @@ export class UpdateProductDto extends PartialType(CreateProductDto) {
 
     @ApiProperty({ description: 'Product quantity', example: '50', required: false })
     @IsOptional()
-    @Transform(({ value }) => value ? parseInt(value) : undefined)
+    @Transform(({ value }) => parseInt(value))
     @IsNumber()
-    quantity?: number;
+    quantity: number;
 
     @ApiProperty({ description: 'Spice level', example: 'Medium', required: false })
     @IsOptional()
