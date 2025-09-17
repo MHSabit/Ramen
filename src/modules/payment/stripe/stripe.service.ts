@@ -3,6 +3,7 @@ import { StripePayment } from '../../../common/lib/Payment/stripe/StripePayment'
 import { PrismaService } from '../../../prisma/prisma.service';
 import { TransactionRepository } from '../../../common/repository/transaction/transaction.repository';
 import { OrderItemRepository } from '../../../common/repository/order-item/order-item.repository';
+import { ProductRepository } from '../../../common/repository/product/product.repository';
 
 @Injectable()
 export class StripeService {
@@ -44,6 +45,37 @@ export class StripeService {
       // Validate amounts
       if (calculatedTotal <= 0) {
         throw new Error('Total amount must be greater than 0');
+      }
+
+      // Check inventory availability before creating payment
+      const productsWithIds = products.filter(p => p.product_id);
+      // console.log('productsWithIds', productsWithIds);
+      if (productsWithIds.length > 0) {
+        const stockCheck = await ProductRepository.checkStockAvailability(
+          productsWithIds.map(p => ({
+            productId: p.product_id,
+            quantity: p.quantity || 1
+          }))
+        );
+        // console.log('stockCheck', stockCheck);
+
+        if (!stockCheck.available) {
+          const errorMessages = [];
+          
+          if (stockCheck.missingProducts.length > 0) {
+            errorMessages.push(`Products not found: ${stockCheck.missingProducts.map(p => p.productId).join(', ')}`);
+          }
+          
+          if (stockCheck.insufficientProducts.length > 0) {
+            errorMessages.push(
+              stockCheck.insufficientProducts.map(p => 
+                `${p.productName}: Available ${p.availableQuantity}, Requested ${p.requestedQuantity}`
+              ).join('; ')
+            );
+          }
+          
+          throw new Error(`Insufficient stock: ${errorMessages.join('. ')}`);
+        }
       }
 
       // Get user details including billing_id (Stripe customer ID)

@@ -174,9 +174,9 @@ export class StripePayment {
     metadata?: stripe.MetadataParam;
   }) {
     const success_url = `${
-      appConfig().app.url
-    }/success?session_id={CHECKOUT_SESSION_ID}`;
-    const cancel_url = `${appConfig().app.url}/failed`;
+      appConfig().app.client_app_url
+    }/payment/success`;
+    const cancel_url = `${appConfig().app.client_app_url}/payment/failed`;
 
     // Create line items for each product
     const line_items = products.map(product => ({
