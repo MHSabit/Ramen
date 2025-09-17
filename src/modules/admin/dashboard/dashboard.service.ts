@@ -14,37 +14,31 @@ export class DashboardService {
     }
     async getTtotalProductsCount() {
         const totalProducts = await this.prisma.product.count();
-        return totalProducts;
+        const totalCategories = await this.prisma.productCategory.count();
+        const totalOrders = await this.prisma.orderItem.count();
+        const totalUsers =await this.prisma.user.count();
+        const result = await this.prisma.paymentTransaction.aggregate({
+           _sum: {
+               amount: true,
+           },
+       });
+    
+       const totalRevenue = result._sum.amount;
+
+       return {
+        success: true,
+        message: 'Dashboard data fetched successfully',
+        data: {
+            totalProducts,
+            totalCategories,
+            totalOrders,
+            totalUsers,
+            totalRevenue,
+        },
+       }
     }
     
         
-    async getTotalCategoriesCount() {
-        const totalCategories = await this.prisma.productCategory.count();
-        return totalCategories;
-
-    }
     
-    async getTotalOrderCount() {
-        const totalOrders = await this.prisma.orderItem.count();
-        return totalOrders;
-
-    }
-    
-    async getTotalUsersCount() {
-        const totalUsers =await this.prisma.user.count();
-        return totalUsers;
-
-    }
-    
-    async getTotalRevenue() {
-         const result = await this.prisma.paymentTransaction.aggregate({
-            _sum: {
-                amount: true,
-            },
-        });
-
-        const totalRevenue = result._sum.amount;
-        return totalRevenue;
-    }
     
 }
