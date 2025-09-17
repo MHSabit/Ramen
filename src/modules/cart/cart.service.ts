@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { addToProductDto } from './add-to-product.dto';
 import { ApiResponse } from '../../types/api-response.type';
@@ -54,6 +54,12 @@ export class CartService {
                     features: true,
                     popular: true,
                     original_price: true,
+                    category: {
+                        select: {
+                            id: true,
+                            name: true,
+                        },
+                    },
                 },
             });
             const productById = new Map(products.map((p) => [p.id, p]));
@@ -64,6 +70,7 @@ export class CartService {
                     ? {
                         ...p,
                         imageUrl: p.image ? `${appConfig().app.url}/public/storage/${p.image}` : null,
+                        category: p.category ? { id: p.category.id, name: p.category.name } : null,
                       }
                     : null;
                 return {

@@ -55,7 +55,7 @@ export class ProductsService {
     }
   }
 
-  async findOne(id: string): Promise<ApiResponse<Product>> {
+  async findOne(id: string): Promise<ApiResponse<any>> {
     try {
       if (!id) {
         return ApiResponseHelper.badRequest("Product ID is required");
@@ -65,6 +65,14 @@ export class ProductsService {
         where: {
           id: id,
         },
+        include: {
+          category: {
+            select: {
+              id: true,
+              name: true,
+            }
+          }
+        }
       });
 
       if (!product) {
@@ -73,7 +81,8 @@ export class ProductsService {
 
       const productWithImageUrl = {
         ...product,
-        imageUrl: product.image ? `${appConfig().app.url}/public/storage/${product.image.split('/').pop()}` : null
+        imageUrl: product.image ? `${appConfig().app.url}/public/storage/${product.image.split('/').pop()}` : null,
+        category: product.category ? { id: product.category.id, name: product.category.name } : null,
       };
 
       return ApiResponseHelper.success(

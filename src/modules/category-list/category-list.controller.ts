@@ -18,8 +18,8 @@ export class CategoryListController {
   // implment pagination, limit and search
   @Get(':id')
   @ApiOperation({ summary: 'Get product in category by id' })
-  async findOne(@Param('id') id: string, @Query('limit') limit?: string, @Query('page') page?: string, @Query('q') q?: string) {
-    return this.categoryListService.findOne(id, limit, page, q);
+  async findOne(@Param('id') id: string) {
+    return this.categoryListService.findOne(id);
   }
 
 }
