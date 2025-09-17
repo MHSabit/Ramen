@@ -160,6 +160,8 @@ export class StripePayment {
     currency = 'usd',
     description,
     metadata,
+    shipping_cost = 0,
+    shipping_method,
   }: {
     customer_id?: string;
     products: Array<{
@@ -172,6 +174,8 @@ export class StripePayment {
     currency?: string;
     description?: string;
     metadata?: stripe.MetadataParam;
+    shipping_cost?: number;
+    shipping_method?: string;
   }) {
     const success_url = `${
       appConfig().app.client_app_url
@@ -190,6 +194,21 @@ export class StripePayment {
       },
       quantity: product.quantity || 1,
     }));
+
+    // Add shipping as a line item if shipping cost > 0
+    if (shipping_cost > 0) {
+      line_items.push({
+        price_data: {
+          currency: currency,
+          product_data: {
+            name: `Shipping (${shipping_method || 'Standard'})`,
+            description: 'Shipping and handling',
+          },
+          unit_amount: shipping_cost * 100, // Convert to cents
+        },
+        quantity: 1,
+      });
+    }
 
     const sessionData: stripe.Checkout.SessionCreateParams = {
       mode: 'payment',

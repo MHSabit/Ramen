@@ -124,8 +124,25 @@ export class StripeController {
   ) {
     try {
       const session = await this.stripeService.createPayment({
-        ...createPaymentDto,
         userId,
+        products: createPaymentDto.products,
+        currency: createPaymentDto.currency,
+        description: createPaymentDto.description,
+        total_amount: createPaymentDto.total_amount,
+        // Contact Information
+        contact_first_name: createPaymentDto.contact_first_name,
+        contact_last_name: createPaymentDto.contact_last_name,
+        contact_email: createPaymentDto.contact_email,
+        contact_phone: createPaymentDto.contact_phone,
+        // Shipping Address
+        shipping_address: createPaymentDto.shipping_address,
+        shipping_city: createPaymentDto.shipping_city,
+        shipping_state: createPaymentDto.shipping_state,
+        shipping_zip_code: createPaymentDto.shipping_zip_code,
+        // Shipping Method
+        shipping_method: createPaymentDto.shipping_method,
+        shipping_cost: createPaymentDto.shipping_cost,
+        shipping_days: createPaymentDto.shipping_days,
       });
       return {
         success: true,
