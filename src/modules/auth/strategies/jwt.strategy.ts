@@ -34,7 +34,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       // ignoreExpiration: false, // This should reject expired tokens
-      ignoreExpiration: true, // This should reject expired tokens
+      ignoreExpiration: false, // This should reject expired tokens
       secretOrKey: accessSecret,
     });
   }

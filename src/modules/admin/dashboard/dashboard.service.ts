@@ -1,5 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
+import { ApiResponse } from '../../../types/api-response.type';
+import { ApiResponseHelper } from '../../../common/helpers/api-response.helper';
 
 const prisma = new PrismaClient();
 
@@ -12,30 +14,36 @@ export class DashboardService {
     constructor() {
         this.prisma = new PrismaClient();
     }
-    async getTtotalProductsCount() {
-        const totalProducts = await this.prisma.product.count();
-        const totalCategories = await this.prisma.productCategory.count();
-        const totalOrders = await this.prisma.orderItem.count();
-        const totalUsers =await this.prisma.user.count();
-        const result = await this.prisma.paymentTransaction.aggregate({
-           _sum: {
-               amount: true,
-           },
-       });
-    
-       const totalRevenue = result._sum.amount;
+    async getTtotalProductsCount(): Promise<ApiResponse<any>> {
+        try {
+            const totalProducts = await this.prisma.product.count();
+            const totalCategories = await this.prisma.productCategory.count();
+            const totalOrders = await this.prisma.orderItem.count();
+            const totalUsers = await this.prisma.user.count();
+            const result = await this.prisma.paymentTransaction.aggregate({
+                _sum: { amount: true },
+            });
+            const totalRevenue = result._sum.amount;
 
-       return {
-        success: true,
-        message: 'Dashboard data fetched successfully',
-        data: {
-            totalProducts,
-            totalCategories,
-            totalOrders,
-            totalUsers,
-            totalRevenue,
-        },
-       }
+            return ApiResponseHelper.success(
+                {
+                    totalProducts,
+                    totalCategories,
+                    totalOrders,
+                    totalUsers,
+                    totalRevenue,
+                },
+                'Dashboard data fetched successfully',
+                HttpStatus.OK,
+                'DASHBOARD_FETCH_SUCCESS'
+            );
+        } catch (error) {
+            return ApiResponseHelper.error(
+                error.message || 'Failed to fetch dashboard data',
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                'DASHBOARD_FETCH_ERROR'
+            );
+        }
     }
     
         
