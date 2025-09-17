@@ -1,8 +1,9 @@
 // external imports
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { HttpStatus, Injectable, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRedis } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
+import * as bcrypt from 'bcryptjs';
 
 //internal imports
 import appConfig from '../../config/app.config';
@@ -15,6 +16,9 @@ import { SojebStorage } from '../../common/lib/Disk/SojebStorage';
 import { DateHelper } from '../../common/helper/date.helper';
 import { StripePayment } from '../../common/lib/Payment/stripe/StripePayment';
 import { StringHelper } from '../../common/helper/string.helper';
+import { AuthEmailLoginDto } from './dto/auth-email-login.dto';
+import { ApiResponse } from '../../types/api-response.type';
+import { ApiResponseHelper } from '../../common/helpers/api-response.helper';
 
 @Injectable()
 export class AuthService {
@@ -25,7 +29,7 @@ export class AuthService {
     @InjectRedis() private readonly redis: Redis,
   ) {}
 
-  async me(userId: string) {
+  async me(userId: string): Promise<ApiResponse> {
     try {
       const user = await this.prisma.user.findFirst({
         where: {
@@ -43,15 +47,12 @@ export class AuthService {
           gender: true,
           date_of_birth: true,
           created_at: true,
+          cart_id: true,
         },
       });
 
       if (!user) {
-        return {
-          success: false,
-          message: 'User not found',
-          data:null
-        };
+        return ApiResponseHelper.notFound('User not found', 'USER_NOT_FOUND');
       }
 
       if (user.avatar) {
@@ -60,25 +61,18 @@ export class AuthService {
         );
       }
 
-      if (user) {
-        return {
-          success: true,
-          message: 'User fetched successfully',
-          data: user,
-        };
-      } else {
-        return {
-          success: false,
-          message: 'User not found',
-          data:null
-        };
-      }
+      return ApiResponseHelper.success(
+        user,
+        'User fetched successfully',
+        HttpStatus.OK,
+        'USER_FETCH_SUCCESS'
+      );
     } catch (error) {
-      return {
-        success: false,
-        message: error.message,
-        data:null
-      };
+      return ApiResponseHelper.error(
+        error.message || 'Failed to fetch user details',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        'USER_FETCH_ERROR'
+      );
     }
   }
 
@@ -230,88 +224,194 @@ export class AuthService {
     }
   }
 
-  async login({ email, userId }) {
+  async login(loginDto: AuthEmailLoginDto): Promise<ApiResponse> {
     try {
-      const payload = { email: email, sub: userId };
+      console.log("loginDto", loginDto.email);
+      const user = await UserRepository.getUserDetailsByEmail(loginDto.email);
+      console.log("user", user);
+      console.log("loginDto", loginDto);
+      if (!user) {
+        throw new UnprocessableEntityException({
+          status: HttpStatus.UNPROCESSABLE_ENTITY,
+          errors: {
+            email: 'notFound',
+          },
+        });
+      }
 
-      const accessToken = this.jwtService.sign(payload, { expiresIn: '1h' });
-      const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
+      if (!user.password) {
+        throw new UnprocessableEntityException({
+          status: HttpStatus.UNPROCESSABLE_ENTITY,
+          errors: {
+            password: 'incorrectPassword',
+          },
+        });
+      }
 
-      const user = await UserRepository.getUserDetails(userId);
-
+      const isValidPassword = await bcrypt.compare(
+        loginDto.password,
+        user.password,
+      );
+      console.log("isValidPassword", isValidPassword);
+  
+      if (!isValidPassword) {
+        throw new UnprocessableEntityException({
+          status: HttpStatus.UNPROCESSABLE_ENTITY,
+          errors: {
+            password: 'incorrectPassword',
+          },
+        });
+      }
+      
+      const { token, refreshToken, tokenExpires } = await this.getTokensData({
+        id: user.id,
+      });
+      
       // store refreshToken
       await this.redis.set(
         `refresh_token:${user.id}`,
         refreshToken,
         'EX',
-        60 * 60 * 24 * 7, // 7 days in seconds
+        60 * 5, // 5 minutes in seconds
       );
 
-      return {
-        success: true,
-        message: 'Logged in successfully',
-        authorization: {
-          type: 'bearer',
-          access_token: accessToken,
-          refresh_token: refreshToken,
+      return ApiResponseHelper.success(
+        {
+          refreshToken,
+          token,
+          tokenExpires,
+          user,
         },
-        type: user.type,
-      };
+        'Login successful',
+        HttpStatus.OK,
+      );
+  
     } catch (error) {
-      return {
-        success: false,
-        message: error.message,
-        data:null
-      };
+      if (error instanceof UnprocessableEntityException) {
+        throw error;
+      }
+      
+      return ApiResponseHelper.error(
+        error.message || 'Login failed',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        'LOGIN_ERROR',
+      );
     }
   }
 
-  async refreshToken(user_id: string, refreshToken: string) {
+  async refreshToken(data: { userId: string }): Promise<ApiResponse> {
     try {
-      const storedToken = await this.redis.get(`refresh_token:${user_id}`);
-
-      if (!storedToken || storedToken != refreshToken) {
-        return {
-          success: false,
-          message: 'Refresh token is required',
-          data:null
-        };
+      const user = await UserRepository.getUserDetails(data.userId);
+      console.log("user", user);
+      if (!user) {
+        throw new UnauthorizedException('User not found');
       }
 
-      if (!user_id) {
-        return {
-          success: false,
-          message: 'User not found',
-          data:null
-        };
-      }
+      // Generate new tokens
+      const { token, refreshToken, tokenExpires } = await this.getTokensData({
+        id: user.id,
+      });
 
-      const userDetails = await UserRepository.getUserDetails(user_id);
-      if (!userDetails) {
-        return {
-          success: false,
-          message: 'User not found',
-          data:null
-        };
-      }
+      // Update refresh token in Redis
+      await this.redis.set(
+        `refresh_token:${user.id}`,
+        refreshToken,
+        'EX',
+        60 * 5, // 5 minutes in seconds
+      );
 
-      const payload = { email: userDetails.email, sub: userDetails.id };
-      const accessToken = this.jwtService.sign(payload, { expiresIn: '1h' });
-
-      return {
-        success: true,
-        message: 'Refresh token refreshed successfully',
-        authorization: {
-          type: 'bearer',
-          access_token: accessToken,
+      return ApiResponseHelper.success(
+        {
+          token,
+          refreshToken,
+          tokenExpires,
         },
-      };
+        'Token refreshed successfully',
+        HttpStatus.OK,
+      );
     } catch (error) {
-      return {
-        success: false,
-        message: error.message,
-        data:null
-      };
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+      
+      return ApiResponseHelper.unauthorized(
+        'Invalid refresh token',
+        'INVALID_REFRESH_TOKEN',
+      );
+    }
+  }
+
+  private async getTokensData(data: { id: string }): Promise<{
+    token: string;
+    refreshToken: string;
+    tokenExpires: Date;
+  }> {
+    const tokenExpiresIn = '1h';
+    const refreshExpiresIn = '7d';
+
+    const tokenExpires = Date.now() + this.parseExpiration(tokenExpiresIn);
+
+    // Get user with roles
+    const user = await UserRepository.getUserDetails(data.id);
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const jwtPayload = {
+      sub: data.id.toString(),
+      iss: 'Ramen',
+      aud: 'privy',
+      id: data.id,
+      email: user.email,
+      roles: user.role_users?.map((roleUser) => ({
+        id: roleUser.role.id,
+        name: roleUser.role.name,
+      })) ?? [],
+    };
+
+    const refreshSecret = appConfig().jwt.refresh_secret;
+    console.log('Auth Service - getTokensData - Refresh Secret:', refreshSecret);
+    console.log('Auth Service - getTokensData - Refresh Secret type:', typeof refreshSecret);
+    
+    const [token, refreshToken] = await Promise.all([
+      this.jwtService.signAsync(jwtPayload, {
+        expiresIn: tokenExpiresIn,
+      }),
+      this.jwtService.signAsync(
+        {
+          userId: user.id,
+        },
+        {
+          expiresIn: refreshExpiresIn,
+        },
+      ),
+    ]);
+    
+    console.log('Auth Service - getTokensData - Generated refresh token:', refreshToken);
+
+    const dateTokenExpires = new Date(tokenExpires);
+
+    return {
+      token,
+      refreshToken,
+      tokenExpires: dateTokenExpires,
+    };
+  }
+
+  private parseExpiration(expiration: string): number {
+    // Simple parser for common expiration formats
+    const match = expiration.match(/^(\d+)([smhd])$/);
+    if (!match) return 15 * 60 * 1000; // Default 15 minutes
+
+    const value = parseInt(match[1]);
+    const unit = match[2];
+
+    switch (unit) {
+      case 's': return value * 1000;
+      case 'm': return value * 60 * 1000;
+      case 'h': return value * 60 * 60 * 1000;
+      case 'd': return value * 24 * 60 * 60 * 1000;
+      default: return 15 * 60 * 1000;
     }
   }
 
@@ -356,7 +456,7 @@ export class AuthService {
     email: string;
     password: string;
     type?: string;
-  }) {
+  }): Promise<ApiResponse> {
     try {
       // Check if email already exist
       const userEmailExist = await UserRepository.exist({
@@ -365,11 +465,10 @@ export class AuthService {
       });
 
       if (userEmailExist) {
-        return {
-          success: false,
-          message: 'Email already exist',
-          data:null
-        };
+        return ApiResponseHelper.unprocessableEntity(
+          'Email already exist',
+          'EMAIL_EXISTS',
+        );
       }
 
       const user = await UserRepository.createUser({
@@ -382,11 +481,11 @@ export class AuthService {
       });
 
       if (user == null && user.success == false) {
-        return {
-          success: false,
-          message: 'Failed to create account',
-          data:null
-        };
+        return ApiResponseHelper.error(
+          'Failed to create account',
+          HttpStatus.INTERNAL_SERVER_ERROR,
+          'ACCOUNT_CREATION_FAILED',
+        );
       }
 
       // create stripe customer account
@@ -407,102 +506,89 @@ export class AuthService {
         });
       }
 
-      if (stripeCustomer) {
-        const updateUser = await this.prisma.user.update({
-          where: {
-            id: user.data.id,
-          },
-          data: {
-            billing_id: stripeCustomer.id,
-          },
-        });
-        console.log('updateUser', updateUser);
-      }
-
-      // create otp code
-      const token = await UcodeRepository.createToken({
-        userId: user.data.id,
-        isOtp: true,
-      });
-
-      // send otp code to email
-      await this.mailService.sendOtpCodeToEmail({
-        email: email,
-        name: first_name + ' ' + last_name,
-        otp: token,
-      });
-
-      return {
-        success: true,
-        message: 'We have sent an OTP code to your email',
-      };
-
-      // Commented out since this code path is never reached
-      // // Generate verification token
-      // const tokens = await UcodeRepository.createVerificationToken({
+      // ----------------------------------------------------
+      // // create otp code
+      // const token = await UcodeRepository.createToken({
       //   userId: user.data.id,
-      //   email: email,
+      //   isOtp: true,
       // });
 
-      // // Send verification email with token
-      // await this.mailService.sendVerificationLink({
-      //   email,
-      //   name: email,
-      //   token: tokens.token,
-      //   type: type,
+      // // send otp code to email
+      // await this.mailService.sendOtpCodeToEmail({
+      //   email: email,
+      //   name: name,
+      //   otp: token,
       // });
 
       // return {
       //   success: true,
-      //   message: 'We have sent a verification link to your email',
-      //   data:null
+      //   message: 'We have sent an OTP code to your email',
       // };
+
+      // ----------------------------------------------------
+
+      // Generate verification token
+      const token = await UcodeRepository.createVerificationToken({
+        userId: user.data.id,
+        email: email,
+      });
+
+      // Send verification email with token
+      await this.mailService.sendVerificationLink({
+        email,
+        name: email,
+        token: token.token,
+        type: type,
+      });
+
+      return ApiResponseHelper.success(
+        null,
+        'We have sent a verification link to your email',
+        HttpStatus.CREATED,
+      );
     } catch (error) {
-      return {
-        success: false,
-        message: error.message,
-        data:null
-      };
+      return ApiResponseHelper.error(
+        error.message || 'Registration failed',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        'REGISTRATION_ERROR',
+      );
     }
   }
 
-  async forgotPassword(email) {
+  async forgotPassword(email: string): Promise<ApiResponse> {
     try {
       const user = await UserRepository.exist({
         field: 'email',
         value: email,
       });
 
-      if (user) {
-        const token = await UcodeRepository.createToken({
-          userId: user.id,
-          isOtp: true,
-        });
-
-        await this.mailService.sendOtpCodeToEmail({
-          email: email,
-          name: user.name,
-          otp: token,
-        });
-
-        return {
-          success: true,
-          message: 'We have sent an OTP code to your email',
-          data:null
-        };
-      } else {
-        return {
-          success: false,
-          message: 'Email not found',
-          data:null
-        };
+      if (!user) {
+        return ApiResponseHelper.notFound('Email not found', 'EMAIL_NOT_FOUND');
       }
+
+      const token = await UcodeRepository.createToken({
+        userId: user.id,
+        isOtp: true,
+      });
+
+      await this.mailService.sendOtpCodeToEmail({
+        email: email,
+        name: user.name,
+        otp: token,
+      });
+
+      return ApiResponseHelper.success(
+        null,
+        'We have sent an OTP code to your email',
+        HttpStatus.OK,
+        'OTP_SENT'
+      );
     } catch (error) {
-      return {
-        success: false,
-        message: error.message,
-        data:null
-      };
+      return ApiResponseHelper.error(
+        error.message || 'Something went wrong',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        'FORGOT_PASSWORD_ERROR'
+      );
     }
   }
 

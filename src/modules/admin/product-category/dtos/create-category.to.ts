@@ -12,6 +12,14 @@ export class CreateCategoryDto {
     @IsString()
     description?: string;
 
+    @ApiProperty({ description: 'Category icon', example: 'Fish', required: true })
+    @IsString()
+    icon: string;
+
+    @ApiProperty({ description: 'Category color', example: 'Indigo to Violet', required: true })
+    @IsString()
+    color: string;
+
     @ApiProperty({ description: 'Category image file', type: 'string', format: 'binary', required: false })
     @IsOptional()
     image?: Express.Multer.File;

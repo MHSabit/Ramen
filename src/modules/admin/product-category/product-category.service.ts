@@ -1,9 +1,11 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, ProductCategory } from '@prisma/client';
 import { UpdateCategoryDto } from './dtos/update-category.dto';
 import { CreateCategoryDto } from './dtos/create-category.to';
 import { CategoryFileUploadService } from './services/category-file-upload.service';
 import appConfig from 'src/config/app.config';
+import { ApiResponse } from '../../../types/api-response.type';
+import { ApiResponseHelper } from '../../../common/helpers/api-response.helper';
 
 const prisma = new PrismaClient();
 
@@ -13,7 +15,7 @@ export class ProductCategoryService {
         private readonly categoryFileUploadService: CategoryFileUploadService
     ) {}
 
-    async getAllProductCategories() {
+    async getAllProductCategories(): Promise<ApiResponse<ProductCategory[]>> {
         try {
             const productCategories = await prisma.productCategory.findMany({
                 orderBy: {
@@ -27,26 +29,28 @@ export class ProductCategoryService {
                 imageUrl: category.image ? `${appConfig().app.url}/public/storage/${category.image}` : null
             }));
             
-            return {
-                success: true,
-                message: "Categories fetched successfully",
-                data: categoriesWithImageUrl
-            };
+            return ApiResponseHelper.success(
+                categoriesWithImageUrl,
+                "Categories fetched successfully",
+                HttpStatus.OK,
+                "CATEGORIES_FETCH_SUCCESS"
+            );
         } catch (error) {
-            throw new HttpException({
-                success: false,
-                message: error.message,
-            }, HttpStatus.INTERNAL_SERVER_ERROR);
+            return ApiResponseHelper.error(
+                error.message || 'Failed to fetch categories',
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                'CATEGORIES_FETCH_ERROR'
+            );
         }
     }
 
-    async getProductCategoryById(id: string) {
+    async getProductCategoryById(id: string): Promise<ApiResponse<ProductCategory>> {
         try {
             if (!id) {
-                throw new HttpException({
-                    success: false,
-                    message: "Category ID is required",
-                }, HttpStatus.BAD_REQUEST);
+                return ApiResponseHelper.badRequest(
+                    "Category ID is required",
+                    "CATEGORY_ID_REQUIRED"
+                );
             }
 
             const productCategory = await prisma.productCategory.findUnique({
@@ -56,33 +60,33 @@ export class ProductCategoryService {
             });
             
             if (!productCategory) {
-                throw new HttpException({
-                    success: false,
-                    message: "Product category not found",
-                }, HttpStatus.NOT_FOUND);
+                return ApiResponseHelper.notFound(
+                    "Product category not found",
+                    "CATEGORY_NOT_FOUND"
+                );
             }
-            
-            return {
-                success: true,
-                message: "Category fetched successfully",
-                data: {
-                    ...productCategory,
-                    imageUrl: productCategory.image ? `${appConfig().app.url}/public/storage/${productCategory.image}` : null
-                }
+
+            const categoryWithImageUrl = {
+                ...productCategory,
+                imageUrl: productCategory.image ? `${appConfig().app.url}/public/storage/${productCategory.image}` : null
             };
+            
+            return ApiResponseHelper.success(
+                categoryWithImageUrl,
+                "Category fetched successfully",
+                HttpStatus.OK,
+                "CATEGORY_FETCH_SUCCESS"
+            );
         } catch (error) {
-            if (error instanceof HttpException) {
-                throw error;
-            } else {
-                throw new HttpException({
-                    success: false,
-                    message: error.message,
-                }, HttpStatus.INTERNAL_SERVER_ERROR);
-            }
+            return ApiResponseHelper.error(
+                error.message || 'Failed to fetch category',
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                'CATEGORY_FETCH_ERROR'
+            );
         }
     }
 
-    async createProductCategory(productCategory: CreateCategoryDto) {
+    async createProductCategory(productCategory: CreateCategoryDto): Promise<ApiResponse<ProductCategory>> {
         try {
             // Check if category name already exists
             const existingCategory = await prisma.productCategory.findUnique({
@@ -92,10 +96,11 @@ export class ProductCategoryService {
             });
             
             if (existingCategory) {
-                throw new HttpException({
-                    success: false,
-                    message: "Product category with this name already exists",
-                }, HttpStatus.CONFLICT);
+                return ApiResponseHelper.error(
+                    "Product category with this name already exists",
+                    HttpStatus.CONFLICT,
+                    "CATEGORY_NAME_EXISTS"
+                );
             }
 
             let imageUrl = null;
@@ -110,36 +115,38 @@ export class ProductCategoryService {
                     name: productCategory.name,
                     description: productCategory.description,
                     image: imageUrl,
+                    icon: productCategory.icon,
+                    color: productCategory.color,
                 },
             });
-            
-            return {
-                success: true,
-                message: "Category created successfully",
-                data: {
-                    ...newProductCategory,
-                    imageUrl: newProductCategory.image ? `${appConfig().app.url}/public/storage/${newProductCategory.image}` : null
-                }
+
+            const categoryWithImageUrl = {
+                ...newProductCategory,
+                imageUrl: newProductCategory.image ? `${appConfig().app.url}/public/storage/${newProductCategory.image}` : null
             };
+            
+            return ApiResponseHelper.success(
+                categoryWithImageUrl,
+                "Category created successfully",
+                HttpStatus.CREATED,
+                "CATEGORY_CREATE_SUCCESS"
+            );
         } catch (error) {
-            if (error instanceof HttpException) {
-                throw error;
-            } else {
-                throw new HttpException({
-                    success: false,
-                    message: error.message,
-                }, HttpStatus.INTERNAL_SERVER_ERROR);
-            }
+            return ApiResponseHelper.error(
+                error.message || 'Failed to create category',
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                'CATEGORY_CREATE_ERROR'
+            );
         }
     }
 
-    async updateProductCategoryById(productCategory: UpdateCategoryDto, id: string) {
+    async updateProductCategoryById(productCategory: UpdateCategoryDto, id: string): Promise<ApiResponse<ProductCategory>> {
         try {
             if (!id) {
-                throw new HttpException({
-                    success: false,
-                    message: "Invalid product category ID",
-                }, HttpStatus.BAD_REQUEST);
+                return ApiResponseHelper.badRequest(
+                    "Invalid product category ID",
+                    "INVALID_CATEGORY_ID"
+                );
             }
 
             // Check if the product category exists
@@ -148,10 +155,10 @@ export class ProductCategoryService {
             });
 
             if (!existingCategory) {
-                throw new HttpException({
-                    success: false,
-                    message: "Product category not found",
-                }, HttpStatus.NOT_FOUND);
+                return ApiResponseHelper.notFound(
+                    "Product category not found",
+                    "CATEGORY_NOT_FOUND"
+                );
             }
 
             // Check if new name conflicts with existing category
@@ -161,10 +168,11 @@ export class ProductCategoryService {
                 });
                 
                 if (nameExists) {
-                    throw new HttpException({
-                        success: false,
-                        message: "Product category with this name already exists",
-                    }, HttpStatus.CONFLICT);
+                    return ApiResponseHelper.error(
+                        "Product category with this name already exists",
+                        HttpStatus.CONFLICT,
+                        "CATEGORY_NAME_EXISTS"
+                    );
                 }
             }
 
@@ -172,6 +180,8 @@ export class ProductCategoryService {
             const updateData: any = {};
             if (productCategory.name !== undefined) updateData.name = productCategory.name;
             if (productCategory.description !== undefined) updateData.description = productCategory.description;
+            if (productCategory.icon !== undefined) updateData.icon = productCategory.icon;
+            if (productCategory.color !== undefined) updateData.color = productCategory.color;
 
             // Handle image upload if new image is provided
             if (productCategory.image) {
@@ -191,33 +201,33 @@ export class ProductCategoryService {
                 data: updateData,
             });
 
-            return {
-                success: true,
-                message: "Category updated successfully",
-                data: {
-                    ...updatedCategory,
-                    imageUrl: updatedCategory.image ? `${appConfig().app.url}/public/storage/${updatedCategory.image}` : null
-                }
+            const categoryWithImageUrl = {
+                ...updatedCategory,
+                imageUrl: updatedCategory.image ? `${appConfig().app.url}/public/storage/${updatedCategory.image}` : null
             };
+
+            return ApiResponseHelper.success(
+                categoryWithImageUrl,
+                "Category updated successfully",
+                HttpStatus.OK,
+                "CATEGORY_UPDATE_SUCCESS"
+            );
         } catch (error) {
-            if (error instanceof HttpException) {
-                throw error;
-            } else {
-                throw new HttpException({
-                    success: false,
-                    message: error.message,
-                }, HttpStatus.INTERNAL_SERVER_ERROR);
-            }
+            return ApiResponseHelper.error(
+                error.message || 'Failed to update category',
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                'CATEGORY_UPDATE_ERROR'
+            );
         }
     }
 
-    async deleteProductCategoryById(id: string) {
+    async deleteProductCategoryById(id: string): Promise<ApiResponse<null>> {
         try {
             if (!id) {
-                throw new HttpException({
-                    success: false,
-                    message: "Invalid product category ID",
-                }, HttpStatus.BAD_REQUEST);
+                return ApiResponseHelper.badRequest(
+                    "Invalid product category ID",
+                    "INVALID_CATEGORY_ID"
+                );
             }
 
             // Check if the product category exists
@@ -225,11 +235,33 @@ export class ProductCategoryService {
                 where: { id },
             });
 
+            // check  for the associated product in the product table 
             if (!category) {
-                throw new HttpException({
-                    success: false,
-                    message: "Product category not found",
-                }, HttpStatus.NOT_FOUND);
+                return ApiResponseHelper.notFound(
+                    "Product category not found",
+                    "CATEGORY_NOT_FOUND"
+                );
+            }
+
+            const product = await prisma.product.findMany({
+                where: {
+                    category: {
+                        id: id,
+                    },
+                },
+            });
+            console.log('product', product);
+            for(const p of product){
+                console.log('p', p);
+                await prisma.product.update({
+                    where: {
+                        id: p.id,
+                    },
+                    data: {
+                        categoryId: null,
+                    },
+                });
+                console.log('deleted product', p.id);
             }
 
             // Delete associated image if exists
@@ -238,23 +270,22 @@ export class ProductCategoryService {
             }
 
             // Delete the product category
-            const deletedCategory = await prisma.productCategory.delete({
+            await prisma.productCategory.delete({
                 where: { id },
             });
 
-            return {
-                success: true,
-                message: "Category deleted successfully",
-            };
+            return ApiResponseHelper.success(
+                null,
+                "Category deleted successfully",
+                HttpStatus.OK,
+                "CATEGORY_DELETE_SUCCESS"
+            );
         } catch (error) {
-            if (error instanceof HttpException) {
-                throw error;
-            } else {
-                throw new HttpException({
-                    success: false,
-                    message: error.message,
-                }, HttpStatus.INTERNAL_SERVER_ERROR);
-            }
+            return ApiResponseHelper.error(
+                error.message || 'Failed to delete category',
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                'CATEGORY_DELETE_ERROR'
+            );
         }
     }
 

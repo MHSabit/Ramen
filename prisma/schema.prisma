@@ -38,18 +38,17 @@ model User {
   deleted_at DateTime?
   status     Int?      @default(1) @db.SmallInt
 
-
   approved_at  DateTime?
   availability String?
-  email        String? @unique   // ✅ add this line
-  cart_id    String   @default(cuid()) @unique   // ✅ standalone, auto-generated
-  username   String? @unique
-  name       String? @db.VarChar(255)
-  first_name String? @db.VarChar(255)
-  last_name  String? @db.VarChar(255)
-  password   String? @db.VarChar(255)
-  domain     String? @unique
-  avatar     String?
+  email        String?   @unique // ✅ add this line
+  cart_id      String    @unique @default(cuid()) // ✅ standalone, auto-generated
+  username     String?   @unique
+  name         String?   @db.VarChar(255)
+  first_name   String?   @db.VarChar(255)
+  last_name    String?   @db.VarChar(255)
+  password     String?   @db.VarChar(255)
+  domain       String?   @unique
+  avatar       String?
 
   phone_number  String?
   country       String?
@@ -424,35 +423,43 @@ model UserSetting {
 }
 
 model Product {
-  id          String    @id @default(cuid())
-  name        String
-  description String?
-  price       Decimal   @db.Decimal(10, 2)
-  quantity    Int       @default(0)
-  category    String?
-  image       String?   // URL or path to the product image
-  spice_level String?   // Spice level for ramen products
-  features    String?   // Product features
-  popular     Boolean   @default(false) // Whether product is popular
-  created_at  DateTime  @default(now())
-  updated_at  DateTime  @default(now())
-  deleted_at  DateTime?
+  id             String    @id @default(cuid())
+  name           String
+  description    String?
+  price          Decimal   @db.Decimal(10, 2)
+  quantity       Int       @default(0)
+  image          String? // URL or path to the product image
+  spice_level    Int?      @default(1) // Spice level for ramen products
+  features       String? // Product features
+  popular        Boolean   @default(false) // Whether product is popular
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @default(now())
+  deleted_at     DateTime?
+  original_price Int?      @default(0)
 
   // Relationship to order items (when this product is purchased)
   order_items OrderItem[]
 
+  categoryId String?
+  category   ProductCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
   @@map("products")
 }
-
 
 model ProductCategory {
   id          String    @id @default(cuid())
   name        String    @unique
   description String?
-  image       String?   // URL or path to the product image
+  image       String? // URL or path to the product image
+  icon        String    @default("Fish")
+  color       String    @default("Pink to Orange")
   created_at  DateTime  @default(now())
   updated_at  DateTime  @default(now())
   deleted_at  DateTime?
+
+  // Back-reference to products
+  products Product[]
+
   @@map("product_categories")
 }
 
@@ -481,18 +488,17 @@ model OrderItem {
   @@map("order_items")
 }
 
-
 model Cart {
-  id           String   @id @default(cuid())
-  cart_id      String
-  product_id   String
-  quantity     Int      @default(1)
-  unit_price   Decimal  @db.Decimal(10,2)
-  created_at   DateTime @default(now())
-  updated_at   DateTime @updatedAt
+  id         String   @id @default(cuid())
+  cart_id    String
+  product_id String
+  quantity   Int      @default(1)
+  unit_price Decimal  @db.Decimal(10, 2)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
   @@map("carts")
 }
-
 
 // this table stores example
 // model Note {

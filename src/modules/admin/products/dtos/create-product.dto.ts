@@ -1,53 +1,69 @@
-import { IsBoolean, IsNotEmpty, IsOptional, IsString, IsNumber, IsDecimal } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
-
-export class CreateProductDto {
-
+import {
+    IsBoolean, IsNotEmpty, IsOptional, IsString,
+    IsNumber, IsInt, Min, Max
+  } from 'class-validator';
+  import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+  import { Transform, Type } from 'class-transformer';
+  
+  export class CreateProductDto {
     @ApiProperty({ description: 'Product name', example: 'Tonkotsu Ramen' })
     @IsNotEmpty()
     @IsString() 
     name: string;
 
-    @ApiProperty({ description: 'Product category', example: 'Ramen' })
-    @IsNotEmpty()
+    @ApiProperty({ description: 'Product category ID', example: 'category-uuid-here' })
     @IsString()
-    category: string;
+    @IsOptional()
+    categoryId?: string;
 
     @ApiProperty({ description: 'Product description', example: 'Rich pork bone broth ramen', required: false })
-    @IsOptional()
-    @IsString()
-    description?: string;
-
-    @ApiProperty({ description: 'Product price', example: '12.99' })
     @IsNotEmpty()
-    @Transform(({ value }) => parseFloat(value))
+    @IsString()
+    description: string;
+  
+    @ApiProperty({ description: 'Product price', example: '12.99' })
+    @Type(() => Number)
     @IsNumber()
     price: number;
 
-    @ApiProperty({ description: 'Product image file', type: 'string', format: 'binary', required: false })
+    @ApiPropertyOptional({ description: 'Product original price', example: '12.99' })
+    @IsOptional()
+    @Type(() => Number)
+    @IsNumber()
+    original_price?: number;
+  
+    @ApiPropertyOptional({ description: 'Product image file', type: 'string', format: 'binary' })
     @IsOptional()
     image?: Express.Multer.File;
-
-    @ApiProperty({ description: 'Product quantity', example: '50', required: false })
-    @IsOptional()
-    @Transform(({ value }) => parseInt(value))
-    @IsNumber()
+  
+    @ApiPropertyOptional({ description: 'Product quantity', example: '50' })
+    @Type(() => Number)
+    @IsNotEmpty()
+    @IsInt()
+    @Min(0)
     quantity?: number;
-
-    @ApiProperty({ description: 'Spice level', example: 'Medium', required: false })
+  
+    @ApiProperty({ description: 'Spice level (1–5)', example: '3', enum: [1,2,3,4,5] })
+    @Type(() => Number)
+    @IsInt()
+    @Min(1)
+    @Max(5)
+    spice_level: number;
+  
+    @ApiPropertyOptional({
+      description: 'Product features',
+      example: 'Gluten-free, Vegan options, Extra noodles'
+    })
     @IsOptional()
     @IsString()
-    spice_level?: string;
-
-    @ApiProperty({ description: 'Product features', example: 'Gluten-free, Vegan options available', required: false })
-    @IsOptional()
-    @IsString()
+    @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
     features?: string;
-
-    @ApiProperty({ description: 'Whether product is popular', example: false, required: false })
+  
+    @ApiPropertyOptional({ description: 'Whether product is popular', example: false })
     @IsOptional()
     @IsBoolean()
+    @Transform(({ value }) => value === 'true' || value === true)
     popular?: boolean = false;
 
-}
+   
+  }

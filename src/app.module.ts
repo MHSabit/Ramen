@@ -23,6 +23,7 @@ import { CartModule } from './modules/cart/cart.module';
 import { ProductsModule } from './modules/products/products.module';
 import { ProductPageModule } from './modules/product-page/product-page.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { CategoryListModule } from './modules/category-list/category-list.module';
 
 @Module({
   imports: [
@@ -80,6 +81,7 @@ import { AdminModule } from './modules/admin/admin.module';
     CartModule,
     ProductsModule,
     ProductPageModule,
+    CategoryListModule,
   ],
   controllers: [AppController],
   providers: [

@@ -1,6 +1,9 @@
 import { HttpException, HttpStatus, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { addToProductDto } from './add-to-product.dto';
+import { ApiResponse } from '../../types/api-response.type';
+import { ApiResponseHelper } from '../../common/helpers/api-response.helper';
+import appConfig from 'src/config/app.config';
 
 const prisma = new PrismaClient();
 
@@ -8,9 +11,8 @@ const prisma = new PrismaClient();
 export class CartService {
     constructor() {}
 
-    async getallproductByCartId(cart_id: string, userId: string) {
+    async getallproductByCartId(cart_id: string, userId: string): Promise<ApiResponse<any>> {
         try {
-            console.log('cart id -  User id ', cart_id, userId);
             if (!cart_id) {
                 throw new NotFoundException('Cart ID is required');
             }
@@ -38,27 +40,60 @@ export class CartService {
                 throw new NotFoundException(`No items found for cart_id: ${cart_id}`);
             }
 
-            // return cart;
-            return {
-                success: true,
-                message: "All Products of the cart fetched successfully",
-                data: { cart }
-            };
+            // fetch product details for all cart items
+            const productIds = cart.map((i) => i.product_id);
+            const products = await prisma.product.findMany({
+                where: { id: { in: productIds } },
+                select: {
+                    id: true,
+                    name: true,
+                    description: true,
+                    price: true,
+                    image: true,
+                    spice_level: true,
+                    features: true,
+                    popular: true,
+                    original_price: true,
+                },
+            });
+            const productById = new Map(products.map((p) => [p.id, p]));
+
+            const itemsWithProduct = cart.map((item) => {
+                const p = productById.get(item.product_id) || null;
+                const productWithImageUrl = p
+                    ? {
+                        ...p,
+                        imageUrl: p.image ? `${appConfig().app.url}/public/storage/${p.image}` : null,
+                      }
+                    : null;
+                return {
+                    ...item,
+                    product: productWithImageUrl,
+                };
+            });
+
+            return ApiResponseHelper.success(
+                { cart: itemsWithProduct },
+                "All Products of the cart fetched successfully",
+                HttpStatus.OK,
+                "CART_ITEMS_FETCH_SUCCESS"
+            );
 
         } catch (error) {
             if(error instanceof HttpException){
                 throw error;
             }else{
-                throw new HttpException({
-                success: false,
-                message: error.message,
-                }, HttpStatus.INTERNAL_SERVER_ERROR);
+                return ApiResponseHelper.error(
+                    error.message || 'Failed to fetch cart items',
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    'CART_ITEMS_FETCH_ERROR'
+                );
             }
         }
     }
 
 
-    async addToCart(cart_id: string, body: addToProductDto, userId: string) {
+    async addToCart(cart_id: string, body: addToProductDto, userId: string): Promise<ApiResponse<any>> {
     try {
             const productId = body.product_id;
             const productQuantity = body.product_quantity;
@@ -76,9 +111,7 @@ export class CartService {
             const user = await prisma.user.findUnique({
                 where: { id: userId },
             });
-            console.log("sabit",user.cart_id, cart_id);
             if(cart_id !== user.cart_id){
-                console.log("sabit",user.cart_id, cart_id);
                 throw new NotFoundException('Cart id is belog to other user');
             }
             
@@ -92,7 +125,6 @@ export class CartService {
 
             if (existingItem) {
                 console.log('existing item', existingItem);
-                console.log(" sabit_quantity", existingItem.quantity, productQuantity );
                 const newQty = existingItem.quantity + productQuantity;
 
                 const updatedData =  await prisma.cart.update({
@@ -100,11 +132,12 @@ export class CartService {
                     data: { quantity: newQty },
                 });
 
-                return {
-                    success: true,
-                    message: "Products is added to cart successfully",
-                    data: {updatedData},
-                }; 
+                return ApiResponseHelper.success(
+                    { updatedData },
+                    "Product is added to cart successfully",
+                    HttpStatus.OK,
+                    "CART_ITEM_UPSERT_SUCCESS"
+                ); 
             }
 
             // 3. If not exist, create a new cart item
@@ -117,26 +150,26 @@ export class CartService {
                 },
             });
 
-            return  {
-                success: true,
-                message: "Products is added to cart successfully",
-                data: {
-                    newItem
-                },
-            };
+            return ApiResponseHelper.success(
+                { newItem },
+                "Product is added to cart successfully",
+                HttpStatus.CREATED,
+                "CART_ITEM_CREATE_SUCCESS"
+            );
         } catch (error) {
             if(error instanceof HttpException){
                 throw error;
             }else{
-                throw new HttpException({
-                    success: false,
-                    message: error.message,
-                }, HttpStatus.INTERNAL_SERVER_ERROR);
+                return ApiResponseHelper.error(
+                    error.message || 'Failed to add to cart',
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    'CART_ITEM_CREATE_ERROR'
+                );
             }
         }
     }
 
-    async updateCartItem(cartId: string, body: addToProductDto, userId: string) {
+    async updateCartItem(cartId: string, body: addToProductDto, userId: string): Promise<ApiResponse<any>> {
         try {
                 if (!cartId || !body.product_id) {
                     throw new NotFoundException('Cart ID and Product ID are required');
@@ -169,27 +202,27 @@ export class CartService {
                     data: { quantity: newQty },
                 });
 
-                return {
-                    success: true,
-                    message: "cart item updated successfully",
-                    data: {
-                        updatedCartItem
-                    },
-                };
+                return ApiResponseHelper.success(
+                    { updatedCartItem },
+                    "Cart item updated successfully",
+                    HttpStatus.OK,
+                    "CART_ITEM_UPDATE_SUCCESS"
+                );
             } catch (error) {
                 if(error instanceof HttpException){
                     throw error;
                 }else{
-                    throw new HttpException({
-                        success: false,
-                        message: error.message,
-                    }, HttpStatus.INTERNAL_SERVER_ERROR);
+                    return ApiResponseHelper.error(
+                        error.message || 'Failed to update cart item',
+                        HttpStatus.INTERNAL_SERVER_ERROR,
+                        'CART_ITEM_UPDATE_ERROR'
+                    );
                 }
             }
     }
     
     //  Remove an item from cart
-    async removeCartItem(cartId: string, productId: string, userId: string) {
+    async removeCartItem(cartId: string, productId: string, userId: string): Promise<ApiResponse<any>> {
         try {
                 if (!cartId || !productId) {
                     throw new NotFoundException('Cart ID and Product ID are required');
@@ -221,23 +254,23 @@ export class CartService {
                     where: { id: existingItem.id },
                 });
 
-                return {
-                    success: true,
-                    message: "Products is removed from cart successfully",
-                    data: {
-                        deletedItem
-                    },
-                };
+                return ApiResponseHelper.success(
+                    { deletedItem },
+                    "Product is removed from cart successfully",
+                    HttpStatus.OK,
+                    "CART_ITEM_DELETE_SUCCESS"
+                );
 
 
             } catch (error) {
                 if(error instanceof HttpException){
                     throw error;
                 } else{
-                    throw new HttpException({
-                        success: false,
-                        message: error.message,
-                    }, HttpStatus.INTERNAL_SERVER_ERROR);
+                    return ApiResponseHelper.error(
+                        error.message || 'Failed to remove cart item',
+                        HttpStatus.INTERNAL_SERVER_ERROR,
+                        'CART_ITEM_DELETE_ERROR'
+                    );
                 }
             }
     }

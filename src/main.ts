@@ -1,6 +1,8 @@
 // external imports
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { TransformResponseInterceptor } from './common/interceptors/transform-response.interceptor';
+import { Reflector } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
@@ -44,6 +46,7 @@ async function bootstrap() {
       transform: true,
     }),
   );
+  app.useGlobalInterceptors(new TransformResponseInterceptor(new Reflector()));
   app.useGlobalFilters(new CustomExceptionFilter());
 
   // storage setup
@@ -66,6 +69,8 @@ async function bootstrap() {
       gcpBucket: appConfig().fileSystems.gcs.bucket,
     },
   });
+
+  
 
   // swagger
   const options = new DocumentBuilder()
