@@ -18,6 +18,20 @@ export class StripeService {
     currency = 'usd',
     description,
     total_amount,
+    // Contact Information
+    contact_first_name,
+    contact_last_name,
+    contact_email,
+    contact_phone,
+    // Shipping Address
+    shipping_address,
+    shipping_city,
+    shipping_state,
+    shipping_zip_code,
+    // Shipping Method
+    shipping_method,
+    shipping_cost,
+    shipping_days,
   }: {
     userId: string;
     products: Array<{
@@ -30,13 +44,29 @@ export class StripeService {
     currency?: string;
     description?: string;
     total_amount?: number;
+    // Contact Information
+    contact_first_name: string;
+    contact_last_name: string;
+    contact_email: string;
+    contact_phone: string;
+    // Shipping Address
+    shipping_address: string;
+    shipping_city: string;
+    shipping_state: string;
+    shipping_zip_code: string;
+    // Shipping Method
+    shipping_method: 'standard' | 'express' | 'overnight';
+    shipping_cost: number;
+    shipping_days?: string;
   }) {
     try {
-      // Calculate total amount from products if not provided
-      const calculatedTotal = total_amount || products.reduce((sum, product) => {
+      // Calculate total amount from products + shipping if not provided
+      const productsTotal = products.reduce((sum, product) => {
         return sum + (product.price * (product.quantity || 1));
       }, 0);
-
+      
+      const calculatedTotal = total_amount || (productsTotal + shipping_cost);
+      console.log('calculatedTotal', calculatedTotal);
       // Validate products
       if (!products || products.length === 0) {
         throw new Error('Products are required');
@@ -103,6 +133,20 @@ export class StripeService {
             amount: calculatedTotal,
             currency: currency,
             status: 'pending',
+            // Contact Information
+            contact_first_name,
+            contact_last_name,
+            contact_email,
+            contact_phone,
+            // Shipping Address
+            shipping_address,
+            shipping_city,
+            shipping_state,
+            shipping_zip_code,
+            // Shipping Method
+            shipping_method,
+            shipping_cost,
+            shipping_days,
           },
         });
 
@@ -130,6 +174,8 @@ export class StripeService {
         products: products,
         currency: currency,
         description: description,
+        shipping_cost: shipping_cost,
+        shipping_method: shipping_method,
         metadata: {
           user_id: userId,
           transaction_id: result.id,
@@ -139,6 +185,20 @@ export class StripeService {
             quantity: p.quantity || 1,
             product_id: p.product_id
           }))),
+          // Contact Information
+          contact_first_name,
+          contact_last_name,
+          contact_email,
+          contact_phone,
+          // Shipping Address
+          shipping_address,
+          shipping_city,
+          shipping_state,
+          shipping_zip_code,
+          // Shipping Method
+          shipping_method,
+          shipping_cost: shipping_cost.toString(),
+          shipping_days: shipping_days || '',
         },
       });
 

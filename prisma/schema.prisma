@@ -247,6 +247,23 @@ model PaymentTransaction {
   paid_amount      Decimal?
   paid_currency    String?
 
+  // Contact Information
+  contact_first_name String?
+  contact_last_name  String?
+  contact_email      String?
+  contact_phone      String?
+
+  // Shipping Address
+  shipping_address   String?
+  shipping_city      String?
+  shipping_state     String?
+  shipping_zip_code  String?
+
+  // Shipping Method
+  shipping_method    String? // 'standard', 'express', 'overnight'
+  shipping_cost      Decimal? @db.Decimal(10, 2)
+  shipping_days      String? // '3-5 business days', '1-2 business days', 'Next business day'
+
   // Relationship to order items (purchased products)
   order_items OrderItem[]
 
