@@ -1,19 +1,119 @@
-import { Controller, Post, Req, Headers, Body, UseGuards, Get } from '@nestjs/common';
+import { Controller, Post, Req, Headers, Body, UseGuards, Get, UseInterceptors, ClassSerializerInterceptor } from '@nestjs/common';
 import { StripeService } from './stripe.service';
 import { Request } from 'express';
 import { TransactionRepository } from '../../../common/repository/transaction/transaction.repository';
 import { OrderItemRepository } from '../../../common/repository/order-item/order-item.repository';
+import { ProductRepository } from '../../../common/repository/product/product.repository';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { GetUser } from '../../auth/decorators/get-user.decorator';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { PrismaService } from '../../../prisma/prisma.service';
 
 @Controller('payment/stripe')
+@UseInterceptors(ClassSerializerInterceptor)
 export class StripeController {
   constructor(
     private readonly stripeService: StripeService,
     private readonly prisma: PrismaService,
   ) {}
+
+  /**
+   * Reduce product quantities after successful payment
+   * @param sessionId - Stripe session ID
+   */
+  private async reduceProductQuantitiesAfterPayment(sessionId: string) {
+    try {
+      // Get the transaction to find order items
+      const transaction = await TransactionRepository.getTransactionByReference(sessionId);
+      // console.log('transaction', transaction);
+      if (!transaction) {
+        throw new Error(`Transaction not found for session: ${sessionId}`);
+      }
+
+      // Get order items for this transaction
+      const orderItems = await OrderItemRepository.getOrderItemsByTransactionId(transaction.id);
+      if (!orderItems || orderItems.length === 0) {
+        // console.log(`No order items found for transaction: ${transaction.id}`);
+        return;
+      }
+      // console.log('orderItems', orderItems);
+      // Filter order items that have valid product IDs
+      const validOrderItems = orderItems.filter(item => item.product_id);
+      if (validOrderItems.length === 0) {
+        // console.log(`No valid product IDs found in order items for transaction: ${transaction.id}`);
+        return;
+      }
+      // console.log('validOrderItems', validOrderItems);
+      // Prepare products for quantity reduction
+      const productsToReduce = validOrderItems.map(item => ({
+        productId: item.product_id,
+        quantity: item.quantity
+      }));
+      // console.log('productsToReduce', productsToReduce);
+      // Reduce product quantities atomically
+      const updatedProducts = await ProductRepository.reduceMultipleProductQuantities(productsToReduce);
+      
+      // console.log(`Successfully reduced quantities for ${updatedProducts.length} products after payment:`, 
+      //   updatedProducts.map(p => `${p.name}: -${productsToReduce.find(pt => pt.productId === p.id)?.quantity} (remaining: ${p.quantity})`)
+      // );
+      // console.log('updatedProducts', updatedProducts);
+      return updatedProducts;
+    } catch (error) {
+      // console.error(`Error reducing product quantities for session ${sessionId}:`, error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Restore product quantities after refund/cancellation
+   * @param sessionId - Stripe session ID
+   */
+  private async restoreProductQuantitiesAfterRefund(sessionId: string) {
+    try {
+      // Get the transaction to find order items
+      const transaction = await TransactionRepository.getTransactionByReference(sessionId);
+      if (!transaction) {
+        throw new Error(`Transaction not found for session: ${sessionId}`);
+      }
+
+      // Get order items for this transaction
+      const orderItems = await OrderItemRepository.getOrderItemsByTransactionId(transaction.id);
+      if (!orderItems || orderItems.length === 0) {
+        // console.log(`No order items found for transaction: ${transaction.id}`);
+        return;
+      }
+
+      // Filter order items that have valid product IDs
+      const validOrderItems = orderItems.filter(item => item.product_id);
+      if (validOrderItems.length === 0) {
+        // console.log(`No valid product IDs found in order items for transaction: ${transaction.id}`);
+        return;
+      }
+
+      // Restore product quantities
+      const restoredProducts = [];
+      for (const item of validOrderItems) {
+        try {
+          const restoredProduct = await ProductRepository.restoreProductQuantity(
+            item.product_id,
+            item.quantity
+          );
+          restoredProducts.push(restoredProduct);
+        } catch (error) {
+          // console.error(`Failed to restore quantity for product ${item.product_id}:`, error.message);
+        }
+      }
+      
+      // console.log(`Successfully restored quantities for ${restoredProducts.length} products after refund:`, 
+      //   restoredProducts.map(p => `${p.name}: +${validOrderItems.find(item => item.product_id === p.id)?.quantity} (current: ${p.quantity})`)
+      // );
+
+      return restoredProducts;
+    } catch (error) {
+      // console.error(`Error restoring product quantities for session ${sessionId}:`, error.message);
+      throw error;
+    }
+  }
 
 
   @Post('create-payment')
@@ -151,6 +251,84 @@ export class StripeController {
     }
   }
 
+  @Post('refund')
+  @UseGuards(JwtAuthGuard)
+  async processRefund(
+    @Body() refundData: { sessionId: string; reason?: string },
+    @GetUser() user: any
+  ) {
+    try {
+      const { sessionId, reason } = refundData;
+
+      if (!sessionId) {
+        return {
+          success: false,
+          message: 'Session ID is required',
+          data: null,
+        };
+      }
+
+      // Get the transaction
+      const transaction = await TransactionRepository.getTransactionByReference(sessionId);
+      if (!transaction) {
+        return {
+          success: false,
+          message: 'Transaction not found',
+          data: null,
+        };
+      }
+
+      // Check if transaction belongs to the user
+      if (transaction.user_id !== user.id) {
+        return {
+          success: false,
+          message: 'Unauthorized access to transaction',
+          data: null,
+        };
+      }
+
+      // Check if transaction is eligible for refund
+      if (transaction.status !== 'succeeded') {
+        return {
+          success: false,
+          message: 'Transaction is not eligible for refund',
+          data: null,
+        };
+      }
+
+      // Update transaction status to refunded
+      await TransactionRepository.updateTransaction({
+        reference_number: sessionId,
+        status: 'refunded',
+        raw_status: 'refunded',
+      });
+
+      // Restore product quantities
+      try {
+        await this.restoreProductQuantitiesAfterRefund(sessionId);
+      } catch (error) {
+        console.error('Failed to restore product quantities during refund:', error.message);
+        // Continue with refund even if quantity restoration fails
+      }
+
+      return {
+        success: true,
+        message: 'Refund processed successfully',
+        data: {
+          sessionId,
+          reason,
+          refundedAt: new Date().toISOString(),
+        },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message,
+        data: null,
+      };
+    }
+  }
+
   @Get('products')
   @UseGuards(JwtAuthGuard)
   async getAvailableProducts() {
@@ -190,41 +368,56 @@ export class StripeController {
     @Req() req: Request,
   ) {
     try {
-      const payload = req.rawBody.toString();
+      // Validate signature presence
+      if (!signature) {
+        // console.error('Missing Stripe signature');
+        return { received: false, error: 'Missing signature' };
+      }
+
+      const payload = req.rawBody?.toString();
+      if (!payload) {
+        // console.error('Missing webhook payload');
+        return { received: false, error: 'Missing payload' };
+      }
+
       const event = await this.stripeService.handleWebhook(payload, signature);
 
       // Handle events
       switch (event.type) {
         case 'customer.created':
           break;
-        case 'payment_intent.created':
-          break;
-        case 'payment_intent.succeeded':
-          console.log('payment_intent.succeeded');
-          const paymentIntent = event.data.object;
-          console.log('paymentIntent', paymentIntent);
-          console.log('paymentIntent metadata', paymentIntent.metadata);
+        case 'checkout.session.completed':
+          const session = event.data.object;
+          // console.log('Checkout session completed:', session.id);
           
-          // Extract user information from metadata
-          const userId = paymentIntent.metadata?.user_id;
-          console.log('userId', userId);
-          const transactionId = paymentIntent.metadata?.transaction_id;
-          console.log('transactionId', transactionId);
-          const products = paymentIntent.metadata?.products;
-          console.log('products', products);
-          
-          if (userId && transactionId) {
-            console.log(`Payment succeeded for user: ${userId}, transaction: ${transactionId}`);
-            if (products) {
-              try {
-                const productsList = JSON.parse(products);
-                console.log(`Products purchased:`, productsList);
-              } catch (e) {
-                console.log(`Products metadata: ${products}`);
-              }
-            }
+          // Check if transaction already processed (idempotency)
+          const existingTransaction = await TransactionRepository.getTransactionByReference(session.id);
+          if (existingTransaction && existingTransaction.status === 'succeeded') {
+            // console.log('Transaction already processed:', session.id);
+            break;
           }
           
+          // Update transaction status in database
+          await TransactionRepository.updateTransaction({
+            reference_number: session.id,
+            status: 'succeeded',
+            paid_amount: session.amount_total / 100, // amount in dollars
+            paid_currency: session.currency,
+            raw_status: session.payment_status,
+          });
+
+          // Reduce product quantities after successful payment
+          try {
+            await this.reduceProductQuantitiesAfterPayment(session.id);
+          } catch (error) {
+            console.error('Failed to reduce product quantities:', error.message);
+            // Note: In production, you might want to implement a retry mechanism
+            // or send an alert to administrators for manual intervention
+          }
+          break;
+        case 'payment_intent.succeeded':
+          const paymentIntent = event.data.object;
+          // console.log('Payment intent succeeded:', paymentIntent.id);
           // Update transaction status in database
           await TransactionRepository.updateTransaction({
             reference_number: paymentIntent.id,
@@ -236,15 +429,7 @@ export class StripeController {
           break;
         case 'payment_intent.payment_failed':
           const failedPaymentIntent = event.data.object;
-          
-          // Extract user information from metadata
-          const failedUserId = failedPaymentIntent.metadata?.user_id;
-          const failedTransactionId = failedPaymentIntent.metadata?.transaction_id;
-          
-          if (failedUserId && failedTransactionId) {
-            console.log(`Payment failed for user: ${failedUserId}, transaction: ${failedTransactionId}`);
-          }
-          
+          console.log('Payment failed:', failedPaymentIntent.id);
           // Update transaction status in database
           await TransactionRepository.updateTransaction({
             reference_number: failedPaymentIntent.id,
@@ -252,17 +437,19 @@ export class StripeController {
             raw_status: failedPaymentIntent.status,
           });
           break;
+        case 'checkout.session.expired':
+          const expiredSession = event.data.object;
+          console.log('Checkout session expired:', expiredSession.id);
+          // Update transaction status in database
+          await TransactionRepository.updateTransaction({
+            reference_number: expiredSession.id,
+            status: 'expired',
+            raw_status: 'expired',
+          });
+          break;
         case 'payment_intent.canceled':
           const canceledPaymentIntent = event.data.object;
-          
-          // Extract user information from metadata
-          const canceledUserId = canceledPaymentIntent.metadata?.user_id;
-          const canceledTransactionId = canceledPaymentIntent.metadata?.transaction_id;
-          
-          if (canceledUserId && canceledTransactionId) {
-            console.log(`Payment canceled for user: ${canceledUserId}, transaction: ${canceledTransactionId}`);
-          }
-          
+          // console.log('Payment intent canceled:', canceledPaymentIntent.id);
           // Update transaction status in database
           await TransactionRepository.updateTransaction({
             reference_number: canceledPaymentIntent.id,
@@ -272,15 +459,7 @@ export class StripeController {
           break;
         case 'payment_intent.requires_action':
           const requireActionPaymentIntent = event.data.object;
-          
-          // Extract user information from metadata
-          const actionUserId = requireActionPaymentIntent.metadata?.user_id;
-          const actionTransactionId = requireActionPaymentIntent.metadata?.transaction_id;
-          
-          if (actionUserId && actionTransactionId) {
-            console.log(`Payment requires action for user: ${actionUserId}, transaction: ${actionTransactionId}`);
-          }
-          
+          // console.log('Payment intent requires action:', requireActionPaymentIntent.id);
           // Update transaction status in database
           await TransactionRepository.updateTransaction({
             reference_number: requireActionPaymentIntent.id,
@@ -290,19 +469,19 @@ export class StripeController {
           break;
         case 'payout.paid':
           const paidPayout = event.data.object;
-          console.log(paidPayout);
+          // console.log(paidPayout);
           break;
         case 'payout.failed':
           const failedPayout = event.data.object;
-          console.log(failedPayout);
+          // console.log(failedPayout);
           break;
         default:
-          console.log(`Unhandled event type ${event.type}`);
+          // console.log(`Unhandled event type ${event.type}`);
       }
 
       return { received: true };
     } catch (error) {
-      console.error('Webhook error', error);
+      // console.error('Webhook error', error);
       return { received: false };
     }
   }

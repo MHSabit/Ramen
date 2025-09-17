@@ -17,12 +17,12 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AbilityModule } from './ability/ability.module';
 import { MailModule } from './mail/mail.module';
 import { ApplicationModule } from './modules/application/application.module';
-import { AdminModule } from './modules/admin/admin.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { PaymentModule } from './modules/payment/payment.module';
 import { CartModule } from './modules/cart/cart.module';
 import { ProductsModule } from './modules/products/products.module';
 import { ProductPageModule } from './modules/product-page/product-page.module';
+import { AdminModule } from './modules/admin/admin.module';
 import { CategoryListModule } from './modules/category-list/category-list.module';
 
 @Module({
