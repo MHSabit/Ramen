@@ -174,6 +174,14 @@ export class TransactionRepository {
     });
   }
 
+  static async getTransactionById(id: string) {
+    return await prisma.paymentTransaction.findUnique({
+      where: {
+        id: id,
+      },
+    });
+  }
+
   /**
    * Get successful transactions by user ID
    * @returns

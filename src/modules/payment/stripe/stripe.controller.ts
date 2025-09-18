@@ -1,4 +1,4 @@
-import { Controller, Post, Req, Headers, Body, UseGuards, Get, UseInterceptors, ClassSerializerInterceptor } from '@nestjs/common';
+import { Controller, Post, Req, Headers, Body, UseGuards, Get, UseInterceptors, ClassSerializerInterceptor, Param } from '@nestjs/common';
 import { StripeService } from './stripe.service';
 import { Request } from 'express';
 import { TransactionRepository } from '../../../common/repository/transaction/transaction.repository';
@@ -122,8 +122,7 @@ export class StripeController {
     @Body() createPaymentDto: CreatePaymentDto,
     @GetUser('userId') userId: string,
   ) {
-    try {
-      const session = await this.stripeService.createPayment({
+      return await this.stripeService.createPayment({
         userId,
         products: createPaymentDto.products,
         currency: createPaymentDto.currency,
@@ -144,37 +143,13 @@ export class StripeController {
         shipping_cost: createPaymentDto.shipping_cost,
         shipping_days: createPaymentDto.shipping_days,
       });
-      return {
-        success: true,
-        message: 'Payment session created successfully',
-        data: session,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: error.message,
-        data: null,
-      };
-    }
+      
   }
 
   @Get('transactions')
   @UseGuards(JwtAuthGuard)
   async getUserTransactions(@GetUser('userId') userId: string) {
-    try {
-      const transactions = await TransactionRepository.getTransactionsByUserId(userId);
-      return {
-        success: true,
-        message: 'User transactions fetched successfully',
-        data: transactions,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: error.message,
-        data: null,
-      };
-    }
+      return await TransactionRepository.getTransactionsByUserId(userId);
   }
 
   @Get('transactions/successful')
@@ -379,6 +354,8 @@ export class StripeController {
     }
   }
 
+  
+
   @Post('webhook')
   async handleWebhook(
     @Headers('stripe-signature') signature: string,
@@ -400,7 +377,7 @@ export class StripeController {
       const event = await this.stripeService.handleWebhook(payload, signature);
 
       // Handle events
-      switch (event.type) {
+      switch (event.data.object.type) {
         case 'customer.created':
           break;
         case 'checkout.session.completed':
@@ -501,5 +478,12 @@ export class StripeController {
       // console.error('Webhook error', error);
       return { received: false };
     }
+  }
+
+  @Get('transaction/:transactionId')
+  @UseGuards(JwtAuthGuard)
+  async getTransaction(@Param('transactionId') transactionId: string) {
+      return await this.stripeService.getTransactionById(transactionId);
+      
   }
 }

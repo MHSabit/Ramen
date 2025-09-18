@@ -155,6 +155,8 @@ export class StripePayment {
    * @returns
    */
   static async createCheckoutSession({
+    transaction_id,
+    order_id,
     customer_id,
     products,
     currency = 'usd',
@@ -163,6 +165,8 @@ export class StripePayment {
     shipping_cost = 0,
     shipping_method,
   }: {
+    transaction_id: string;
+    order_id: string;
     customer_id?: string;
     products: Array<{
       name: string;
@@ -179,7 +183,7 @@ export class StripePayment {
   }) {
     const success_url = `${
       appConfig().app.client_app_url
-    }/payment/success`;
+    }/payment/success?transaction_id=${transaction_id}&order_id=${order_id}`;
     const cancel_url = `${appConfig().app.client_app_url}/payment/failed`;
 
     // Create line items for each product
@@ -243,6 +247,7 @@ export class StripePayment {
     }/success?session_id={CHECKOUT_SESSION_ID}`;
     const cancel_url = `${appConfig().app.url}/failed`;
 
+
     const session = await Stripe.checkout.sessions.create({
       mode: 'subscription',
       payment_method_types: ['card'],
@@ -260,6 +265,7 @@ export class StripePayment {
       cancel_url: cancel_url,
       // automatic_tax: { enabled: true },
     });
+
     return session;
   }
 

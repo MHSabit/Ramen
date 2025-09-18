@@ -1,15 +1,30 @@
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { StripePayment } from '../../../common/lib/Payment/stripe/StripePayment';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { TransactionRepository } from '../../../common/repository/transaction/transaction.repository';
-import { OrderItemRepository } from '../../../common/repository/order-item/order-item.repository';
 import { ProductRepository } from '../../../common/repository/product/product.repository';
+import { ApiResponse } from '../../../types/api-response.type';
+import { ApiResponseHelper } from '../../../common/helpers/api-response.helper';
 
 @Injectable()
 export class StripeService {
   constructor(private prisma: PrismaService) {}
-  async handleWebhook(rawBody: string, sig: string | string[]) {
-    return StripePayment.handleWebhook(rawBody, sig);
+  async handleWebhook(rawBody: string, sig: string | string[]): Promise<ApiResponse<any>> {
+    try {
+      const result = await StripePayment.handleWebhook(rawBody, sig);
+      return ApiResponseHelper.success(
+        result,
+        'Webhook handled successfully',
+        HttpStatus.OK,
+        'WEBHOOK_HANDLE_SUCCESS'
+      );
+    } catch (error) {
+      return ApiResponseHelper.error(
+        error.message || 'Failed to handle webhook',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        'WEBHOOK_HANDLE_ERROR'
+      );
+    }
   }
 
   async createPayment({
@@ -58,7 +73,7 @@ export class StripeService {
     shipping_method: 'standard' | 'express' | 'overnight';
     shipping_cost: number;
     shipping_days?: string;
-  }) {
+  }): Promise<ApiResponse<any>> {
     try {
       // Calculate total amount from products + shipping if not provided
       const productsTotal = products.reduce((sum, product) => {
@@ -170,6 +185,8 @@ export class StripeService {
 
       // Create checkout session with customer and metadata
       const session = await StripePayment.createCheckoutSession({
+        transaction_id: result.id,
+        order_id: result.order_id,
         customer_id: user.billing_id,
         products: products,
         currency: currency,
@@ -209,9 +226,24 @@ export class StripeService {
         status: 'pending',
       });
       
-      return session;
+      return ApiResponseHelper.success(
+        { session, transaction: updatedTransaction },
+        'Payment session created successfully',
+        HttpStatus.CREATED,
+        'PAYMENT_SESSION_CREATE_SUCCESS'
+      );
     } catch (error) {
-      throw new Error(`Failed to create payment: ${error.message}`);
+      return ApiResponseHelper.error(
+        error.message || 'Failed to create payment',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        'PAYMENT_SESSION_CREATE_ERROR'
+      );
     }
+  }
+
+  async getTransactionById(transactionId: string): Promise<ApiResponse<any>> {
+    const transaction = await TransactionRepository.getTransactionById(transactionId);
+    console.log(transaction)
+    return ApiResponseHelper.success(transaction, 'Transaction fetched successfully', HttpStatus.OK, 'TRANSACTION_FETCH_SUCCESS');
   }
 }

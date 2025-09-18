@@ -20,7 +20,9 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "cmd": "cross-env PRISMA_ENV=1 ts-node src/cmd.ts",
-    "migrate": "npx prisma migrate dev"
+    "migrate": "npx prisma migrate dev",
+    "prisma:generate": "npx prisma generate",
+    "migrate:reset": "npx prisma migrate reset"
   },
   "dependencies": {
     "@casl/ability": "6.7.3",

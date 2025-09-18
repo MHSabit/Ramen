@@ -457,7 +457,7 @@ model Product {
   // Relationship to order items (when this product is purchased)
   order_items OrderItem[]
 
-  categoryId String?
+  categoryId String?      @default(null)
   category   ProductCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   @@map("products")

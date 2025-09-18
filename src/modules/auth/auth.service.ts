@@ -226,15 +226,12 @@ export class AuthService {
 
   async login(loginDto: AuthEmailLoginDto): Promise<ApiResponse> {
     try {
-      console.log("loginDto", loginDto.email);
       const user = await UserRepository.getUserDetailsByEmail(loginDto.email);
-      console.log("user", user);
-      console.log("loginDto", loginDto);
       if (!user) {
         throw new UnprocessableEntityException({
-          status: HttpStatus.UNPROCESSABLE_ENTITY,
+          status: HttpStatus.NOT_FOUND,
           errors: {
-            email: 'notFound',
+            email: 'User Not Found',
           },
         });
       }
