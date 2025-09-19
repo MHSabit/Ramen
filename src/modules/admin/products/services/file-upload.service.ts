@@ -49,7 +49,7 @@ export class FileUploadService {
       // Delete file using SojebStorage
       return await SojebStorage.delete(fileName);
     } catch (error) {
-      console.error('Failed to delete product image:', error);
+      // console.error('Failed to delete product image:', error);
       return false;
     }
   }

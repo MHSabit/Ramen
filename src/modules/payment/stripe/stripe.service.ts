@@ -66,7 +66,7 @@ export class StripeService {
       }, 0);
       
       const calculatedTotal = total_amount || (productsTotal + shipping_cost);
-      console.log('calculatedTotal', calculatedTotal);
+      // console.log('calculatedTotal', calculatedTotal);
       // Validate products
       if (!products || products.length === 0) {
         throw new Error('Products are required');

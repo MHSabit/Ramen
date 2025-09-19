@@ -115,6 +115,8 @@ export class StripeController {
     }
   }
 
+  
+
 
   @Post('create-payment')
   @UseGuards(JwtAuthGuard)
@@ -234,7 +236,7 @@ export class StripeController {
     }
   }
 
-  @Get('transaction/:transactionId/items')
+  @Get('transaction/:transactionId')
   @UseGuards(JwtAuthGuard)
   async getTransactionItems(
     @GetUser('userId') userId: string,
@@ -242,7 +244,7 @@ export class StripeController {
   ) {
     try {
       const transactionId = req.params.transactionId;
-      
+      // console.log('transactionId', transactionId);
       // Verify the transaction belongs to the user
       const transaction = await TransactionRepository.getTransactionByReference(transactionId);
       if (!transaction || transaction.user_id !== userId) {
@@ -253,11 +255,11 @@ export class StripeController {
         };
       }
 
-      const items = await OrderItemRepository.getOrderItemsByTransactionId(transactionId);
+      // const items = await OrderItemRepository.getOrderItemsByTransactionId(transactionId);
       return {
         success: true,
         message: 'Transaction items fetched successfully',
-        data: items,
+        data: transaction,
       };
     } catch (error) {
       return {
@@ -446,7 +448,7 @@ export class StripeController {
           break;
         case 'payment_intent.payment_failed':
           const failedPaymentIntent = event.data.object;
-          console.log('Payment failed:', failedPaymentIntent.id);
+          // console.log('Payment failed:', failedPaymentIntent.id);
           // Update transaction status in database
           await TransactionRepository.updateTransaction({
             reference_number: failedPaymentIntent.id,
@@ -456,7 +458,7 @@ export class StripeController {
           break;
         case 'checkout.session.expired':
           const expiredSession = event.data.object;
-          console.log('Checkout session expired:', expiredSession.id);
+          // console.log('Checkout session expired:', expiredSession.id);
           // Update transaction status in database
           await TransactionRepository.updateTransaction({
             reference_number: expiredSession.id,

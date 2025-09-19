@@ -93,7 +93,7 @@ export class AuthController {
     try {
       const user_id = req.user.userId;
       
-      console.log('Refresh token request for user:', user_id);
+      // console.log('Refresh token request for user:', user_id);
       
       const response = await this.authService.refreshToken({
         userId: user_id,
@@ -186,7 +186,7 @@ export class AuthController {
   @Post('forgot-password')
   async forgotPassword(@Body() data: { email: string }) {
     try {
-      console.log("data", data);
+      // console.log("data", data);
       const email = data.email;
       if (!email) {
         throw new HttpException('Email not provided', HttpStatus.UNAUTHORIZED);

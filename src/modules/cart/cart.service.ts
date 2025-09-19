@@ -28,7 +28,6 @@ export class CartService {
             }
 
             if(user.cart_id !== cart_id){
-                // console.log("sabit",user.cart_id, cart_id);
                 throw new NotFoundException('Cart id is belog to other user');
             }
 
@@ -102,7 +101,7 @@ export class CartService {
             const product = await prisma.product.findUnique({
                 where: { id: productId },
             });
-            console.log('product', product);
+            // console.log('product', product);
 
             if (!product) {
                 throw new NotFoundException('Product not found');
@@ -124,7 +123,7 @@ export class CartService {
             });
 
             if (existingItem) {
-                console.log('existing item', existingItem);
+                // console.log('existing item', existingItem);
                 const newQty = existingItem.quantity + productQuantity;
 
                 const updatedData =  await prisma.cart.update({
@@ -177,9 +176,9 @@ export class CartService {
                 const user = await prisma.user.findUnique({
                         where: { id: userId },
                     });
-                console.log("sabit",user.cart_id, cartId);
+                // console.log("sabit",user.cart_id, cartId);
                 if(cartId !== user.cart_id){
-                    console.log("sabit",user.cart_id, cartId);
+                    // console.log("sabit",user.cart_id, cartId);
                     throw new NotFoundException('Cart id is belog to other user');
                 }
                 const existingItem = await prisma.cart.findFirst({
@@ -231,9 +230,7 @@ export class CartService {
                 const user = await prisma.user.findUnique({
                         where: { id: userId },
                     });
-                console.log("sabit",user.cart_id, cartId);
                 if(cartId !== user.cart_id){
-                    console.log("sabit",user.cart_id, cartId);
                     throw new NotFoundException('Cart id is belog to other user');
                 }
 
