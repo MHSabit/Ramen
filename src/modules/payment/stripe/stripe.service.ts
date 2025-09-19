@@ -164,7 +164,13 @@ export class StripeService {
         await tx.orderItem.createMany({
           data: orderItems,
         });
-
+        const usercart = await this.prisma.cart.findUnique({
+          where: { id : userId },
+        });
+        const cartDelete = await this.prisma.cart.delete({
+          where: { id: usercart.id },       
+        });
+        console.log('cartDelete', cartDelete);
         return transaction;
       });
 

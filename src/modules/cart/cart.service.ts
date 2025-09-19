@@ -21,14 +21,11 @@ export class CartService {
                 where: { id: userId },
             });
 
-            // console.log('user', user);
-
             if (!user) {
                 throw new NotFoundException('User not found');
             }
 
             if(user.cart_id !== cart_id){
-                // console.log("sabit",user.cart_id, cart_id);
                 throw new NotFoundException('Cart id is belog to other user');
             }
 
@@ -102,7 +99,6 @@ export class CartService {
             const product = await prisma.product.findUnique({
                 where: { id: productId },
             });
-            console.log('product', product);
 
             if (!product) {
                 throw new NotFoundException('Product not found');
@@ -111,6 +107,11 @@ export class CartService {
             const user = await prisma.user.findUnique({
                 where: { id: userId },
             });
+
+            if(!user){
+                throw new NotFoundException('User not found');
+            }
+
             if(cart_id !== user.cart_id){
                 throw new NotFoundException('Cart id is belog to other user');
             }
@@ -124,7 +125,6 @@ export class CartService {
             });
 
             if (existingItem) {
-                console.log('existing item', existingItem);
                 const newQty = existingItem.quantity + productQuantity;
 
                 const updatedData =  await prisma.cart.update({
@@ -177,9 +177,7 @@ export class CartService {
                 const user = await prisma.user.findUnique({
                         where: { id: userId },
                     });
-                console.log("sabit",user.cart_id, cartId);
                 if(cartId !== user.cart_id){
-                    console.log("sabit",user.cart_id, cartId);
                     throw new NotFoundException('Cart id is belog to other user');
                 }
                 const existingItem = await prisma.cart.findFirst({
@@ -224,16 +222,16 @@ export class CartService {
     //  Remove an item from cart
     async removeCartItem(cartId: string, productId: string, userId: string): Promise<ApiResponse<any>> {
         try {
-                if (!cartId || !productId) {
+            if (!cartId || !productId) {
                     throw new NotFoundException('Cart ID and Product ID are required');
                 }
-
                 const user = await prisma.user.findUnique({
                         where: { id: userId },
                     });
-                console.log("sabit",user.cart_id, cartId);
-                if(cartId !== user.cart_id){
-                    console.log("sabit",user.cart_id, cartId);
+                if(!user){
+                    throw new NotFoundException('User not found');
+                }
+                if(cartId !== user?.cart_id){
                     throw new NotFoundException('Cart id is belog to other user');
                 }
 
@@ -268,6 +266,34 @@ export class CartService {
                 } else{
                     return ApiResponseHelper.error(
                         error.message || 'Failed to remove cart item',
+                        HttpStatus.INTERNAL_SERVER_ERROR,
+                        'CART_ITEM_DELETE_ERROR'
+                    );
+                }
+            }
+    }
+
+    async clearCart(userID) {
+        try {
+            const user = await prisma.user.findUnique({
+                where: { id: userID },
+            });
+            if (!user) {
+                throw new NotFoundException('User not found');
+            }
+
+            if(user.cart_id){
+                const cartID =  user.cart_id;
+                const cartClear = await prisma.cart.deleteMany({    
+                    where: { cart_id: cartID },
+                });
+            } 
+    } catch (error) {
+                if(error instanceof HttpException){
+                    throw error;
+                } else{
+                    return ApiResponseHelper.error(
+                        error.message || 'Failed to remove cart ',
                         HttpStatus.INTERNAL_SERVER_ERROR,
                         'CART_ITEM_DELETE_ERROR'
                     );
