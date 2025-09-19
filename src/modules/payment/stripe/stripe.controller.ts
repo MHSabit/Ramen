@@ -8,6 +8,7 @@ import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { GetUser } from '../../auth/decorators/get-user.decorator';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { MailService } from '../../../mail/mail.service';
 
 @Controller('payment/stripe')
 @UseInterceptors(ClassSerializerInterceptor)
@@ -15,6 +16,7 @@ export class StripeController {
   constructor(
     private readonly stripeService: StripeService,
     private readonly prisma: PrismaService,
+    private readonly mailService: MailService,
   ) {}
 
   /**
@@ -60,6 +62,115 @@ export class StripeController {
       return updatedProducts;
     } catch (error) {
       // console.error(`Error reducing product quantities for session ${sessionId}:`, error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Send email notifications for completed orders
+   * @param sessionId - Stripe session ID
+   */
+  private async sendOrderEmailNotifications(sessionId: string) {
+    try {
+      // Get transaction details
+      const transaction = await TransactionRepository.getTransactionByReference(sessionId);
+      if (!transaction) {
+        throw new Error(`Transaction not found for session: ${sessionId}`);
+      }
+
+      // Get order items
+      const orderItems = await OrderItemRepository.getOrderItemsByTransactionId(transaction.id);
+      if (!orderItems || orderItems.length === 0) {
+        console.log(`No order items found for transaction: ${transaction.id}`);
+        return;
+      }
+
+      // Get user details
+      const user = await this.prisma.user.findUnique({
+        where: { id: transaction.user_id },
+        select: {
+          id: true,
+          email: true,
+          first_name: true,
+          last_name: true,
+        },
+      });
+
+      if (!user) {
+        throw new Error(`User not found for transaction: ${transaction.id}`);
+      }
+
+      // Prepare order data for emails
+      const orderData = {
+        customerName: `${transaction.contact_first_name} ${transaction.contact_last_name}`,
+        customerEmail: transaction.contact_email,
+        customerPhone: transaction.contact_phone,
+        customerId: user.id,
+        orderNumber: sessionId,
+        orderDate: new Date().toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+        totalAmount: transaction.amount,
+        items: orderItems.map(item => ({
+          name: item.product_name,
+          quantity: item.quantity,
+          price: item.product_price,
+          spice_level: 'Medium', // Default spice level
+        })),
+        shippingAddress: transaction.shipping_address,
+        shippingCity: transaction.shipping_city,
+        shippingState: transaction.shipping_state,
+        shippingZipCode: transaction.shipping_zip_code,
+        shippingMethod: transaction.shipping_method,
+        shippingDays: parseInt(transaction.shipping_days) || 3,
+      };
+
+      // Send customer confirmation email
+      await this.mailService.sendOrderConfirmationEmail({
+        customerEmail: orderData.customerEmail,
+        customerName: orderData.customerName,
+        orderNumber: orderData.orderNumber,
+        orderDate: orderData.orderDate,
+        totalAmount: orderData.totalAmount,
+        items: orderData.items,
+        shippingAddress: orderData.shippingAddress,
+        shippingCity: orderData.shippingCity,
+        shippingState: orderData.shippingState,
+        shippingZipCode: orderData.shippingZipCode,
+        shippingMethod: orderData.shippingMethod,
+        shippingDays: orderData.shippingDays,
+      });
+
+      // Send admin notification email
+      const adminEmail = process.env.ADMIN_EMAIL || 'admin@example.com';
+      const adminDashboardUrl = `${process.env.ADMIN_DASHBOARD_URL || 'http://localhost:3000/admin'}/orders/${sessionId}`;
+      
+      await this.mailService.sendAdminOrderNotification({
+        adminEmail: adminEmail,
+        customerName: orderData.customerName,
+        customerEmail: orderData.customerEmail,
+        customerPhone: orderData.customerPhone,
+        customerId: orderData.customerId,
+        orderNumber: orderData.orderNumber,
+        orderDate: orderData.orderDate,
+        totalAmount: orderData.totalAmount,
+        items: orderData.items,
+        shippingAddress: orderData.shippingAddress,
+        shippingCity: orderData.shippingCity,
+        shippingState: orderData.shippingState,
+        shippingZipCode: orderData.shippingZipCode,
+        shippingMethod: orderData.shippingMethod,
+        shippingDays: orderData.shippingDays,
+        adminDashboardUrl: adminDashboardUrl,
+      });
+
+      console.log(`Email notifications sent for order ${sessionId}`);
+    } catch (error) {
+      console.error(`Error sending email notifications for session ${sessionId}:`, error.message);
       throw error;
     }
   }
@@ -432,6 +543,14 @@ export class StripeController {
             console.error('Failed to reduce product quantities:', error.message);
             // Note: In production, you might want to implement a retry mechanism
             // or send an alert to administrators for manual intervention
+          }
+
+          // Send email notifications
+          try {
+            await this.sendOrderEmailNotifications(session.id);
+          } catch (error) {
+            console.error('Failed to send order email notifications:', error.message);
+            // Continue processing even if email sending fails
           }
           break;
         case 'payment_intent.succeeded':

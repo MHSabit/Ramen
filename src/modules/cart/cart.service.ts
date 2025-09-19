@@ -99,10 +99,6 @@ export class CartService {
             const product = await prisma.product.findUnique({
                 where: { id: productId },
             });
-<<<<<<< HEAD
-            // console.log('product', product);
-=======
->>>>>>> 91fd4252c494342f5edcf1ad04fc3dbc53591999
 
             if (!product) {
                 throw new NotFoundException('Product not found');
@@ -129,10 +125,6 @@ export class CartService {
             });
 
             if (existingItem) {
-<<<<<<< HEAD
-                // console.log('existing item', existingItem);
-=======
->>>>>>> 91fd4252c494342f5edcf1ad04fc3dbc53591999
                 const newQty = existingItem.quantity + productQuantity;
 
                 const updatedData =  await prisma.cart.update({
@@ -185,13 +177,7 @@ export class CartService {
                 const user = await prisma.user.findUnique({
                         where: { id: userId },
                     });
-<<<<<<< HEAD
-                // console.log("sabit",user.cart_id, cartId);
                 if(cartId !== user.cart_id){
-                    // console.log("sabit",user.cart_id, cartId);
-=======
-                if(cartId !== user.cart_id){
->>>>>>> 91fd4252c494342f5edcf1ad04fc3dbc53591999
                     throw new NotFoundException('Cart id is belog to other user');
                 }
                 const existingItem = await prisma.cart.findFirst({
@@ -242,14 +228,10 @@ export class CartService {
                 const user = await prisma.user.findUnique({
                         where: { id: userId },
                     });
-<<<<<<< HEAD
-                if(cartId !== user.cart_id){
-=======
                 if(!user){
                     throw new NotFoundException('User not found');
                 }
                 if(cartId !== user?.cart_id){
->>>>>>> 91fd4252c494342f5edcf1ad04fc3dbc53591999
                     throw new NotFoundException('Cart id is belog to other user');
                 }
 

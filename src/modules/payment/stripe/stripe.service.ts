@@ -164,15 +164,16 @@ export class StripeService {
         await tx.orderItem.createMany({
           data: orderItems,
         });
-        const usercart = await this.prisma.cart.findUnique({
+        const usercart = await this.prisma.user.findUnique({
           where: { id : userId },
         });
-        const cartDelete = await this.prisma.cart.delete({
-          where: { id: usercart.id },       
+        const cartDelete = await this.prisma.cart.deleteMany({
+          where: { cart_id: usercart.cart_id },       
         });
-        console.log('cartDelete', cartDelete);
+        // console.log('cartDelete', cartDelete);
         return transaction;
       });
+
 
       // Create checkout session with customer and metadata
       const session = await StripePayment.createCheckoutSession({

@@ -198,7 +198,7 @@ export class TransactionRepository {
     // console.log('reference_number', reference_number);
     return await prisma.paymentTransaction.findFirst({
       where: {
-        id: reference_number,
+        reference_number: reference_number,
       },
     });
   }
