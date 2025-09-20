@@ -7,6 +7,8 @@ import { UserModule } from './user/user.module';
 import { NotificationModule } from './notification/notification.module';
 import { ProductsModule } from './products/products.module';
 import { ProductCategoryModule } from './product-category/product-category.module';
+import { DashboardModule } from './dashboard/dashboard.module';
+import { OrderItemsModule } from './order-items/order-items.module';
 
 @Module({
   imports: [
@@ -18,6 +20,8 @@ import { ProductCategoryModule } from './product-category/product-category.modul
     NotificationModule,
     ProductsModule,
     ProductCategoryModule,
+    DashboardModule,
+    OrderItemsModule,
   ],
   controllers: [],
 })

@@ -1,10 +1,13 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { CreateProductDto } from './dtos/create-product.dto';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Product } from '@prisma/client';
 import { UpdateProductDto } from './dtos/update-product.dtos';
 import { FileUploadService } from './services/file-upload.service';
 import appConfig from 'src/config/app.config';
 import { Http2ServerRequest } from 'http2';
+import { ApiResponse } from '../../../types/api-response.type';
+import { PaginatedAPIResponse } from '../../../types/api-response-v2.type';
+import { ApiResponseHelper } from '../../../common/helpers/api-response.helper';
 
 const prisma = new PrismaClient();
 
@@ -17,7 +20,7 @@ export class ProductsService {
 
 
     // get all products
-    async getAllProducts(q: string, limit: number, page: number) {
+    async getAllProducts(q: string, limit: number, page: number): Promise<PaginatedAPIResponse<Product>> {
         try {   
             // Build where condition for search
             const where_condition: any = {};
@@ -36,6 +39,14 @@ export class ProductsService {
                 where: where_condition,
                 take: limit,
                 skip: skip,
+                include: {
+                    category: {
+                        select: {
+                            id: true,
+                            name: true,
+                        },
+                    },
+                },
                 orderBy: {
                     created_at: 'desc' // Order by newest first
                 }
@@ -45,51 +56,44 @@ export class ProductsService {
             const totalCount = await prisma.product.count({
                 where: where_condition
             });
-            // Calculate pagination metadata
-            const totalPages = Math.ceil(totalCount / limit);
-            const hasNextPage = page < totalPages;
-            const hasPrevPage = page > 1;
+
+            // Transform products with image URLs
             const productsWithImageUrl = products.map(product => ({
                 ...product,
+                category: product.category,
                 imageUrl: product.image ? `${appConfig().app.url}/public/storage/${product.image}` : null
             }));
-            return {
-                success: true,
-                message: "Products fetched successfully",
-                data: {
-                    products: productsWithImageUrl,
-                    pagination: {
-                        currentPage: page,
-                        totalPages,
-                        totalCount,
-                        limit,
-                        hasNextPage,
-                        hasPrevPage
-                    }
-                }
-            };
+
+            return ApiResponseHelper.paginated(
+                productsWithImageUrl,
+                totalCount,
+                "Products data fetch successful",
+                HttpStatus.OK,
+                "PRODUCTS_FETCH_SUCCESS"
+            );
         } catch (error) {
             if(error instanceof HttpException){
                 throw error;
             }else{
-                throw new HttpException({
-                    success: false,
-                    message: error.message,
-                }, HttpStatus.INTERNAL_SERVER_ERROR);
+                return ApiResponseHelper.error(
+                    error.message || 'Failed to fetch products',
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    'PRODUCTS_FETCH_ERROR'
+                );
             }
         }
     }
 
     // get product by id
-    async getProductById(id: string) {
-
+    async getProductById(id: string): Promise<ApiResponse<any>> {
         try {
             if(!id){
-                throw new HttpException({
-                    success: false,
-                    message: "Product ID is required",
-                }, HttpStatus.BAD_REQUEST);
+                return ApiResponseHelper.badRequest(
+                    "Product ID is required",
+                    "PRODUCT_ID_REQUIRED"
+                );
             }
+            
             const product = await prisma.product.findUnique({
                 where: {
                     id: id,
@@ -97,35 +101,36 @@ export class ProductsService {
             });
             
             if (!product) {
-                throw new HttpException({
-                    success: false,
-                    message: "Product not found",
-                }, HttpStatus.NOT_FOUND);
+                return ApiResponseHelper.notFound(
+                    "Product not found",
+                    "PRODUCT_NOT_FOUND"
+                );
             }
-            return {
-                success: true,
-                message: "Product fetched successfully",
-                data: {
-                    ...product,
-                    imageUrl: product.image ? `${appConfig().app.url}/public/storage/product_image/${product.image.split('/').pop()}` : null
-                }
+
+            const productWithImageUrl = {
+                ...product,
+                imageUrl: product.image ? `${appConfig().app.url}/public/storage/product_image/${product.image.split('/').pop()}` : null
             };
+
+            return ApiResponseHelper.success(
+                productWithImageUrl,
+                "Product fetched successfully",
+                HttpStatus.OK,
+                "PRODUCT_FETCH_SUCCESS"
+            );
         } catch (error) {
-            if(error instanceof HttpException){
-                throw error;
-            }else{
-                throw new HttpException({
-                    success: false,
-                    message: error.message,
-                }, HttpStatus.INTERNAL_SERVER_ERROR);
-            }
+            return ApiResponseHelper.error(
+                error.message || 'Failed to fetch product',
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                'PRODUCT_FETCH_ERROR'
+            );
         }
     }
 
 
 
     // create product
-    async createProduct(product: CreateProductDto) {
+    async createProduct(product: CreateProductDto): Promise<ApiResponse<any>> {
         try {
             let imageUrl = null;
             
@@ -134,46 +139,49 @@ export class ProductsService {
                 imageUrl = await this.fileUploadService.uploadProductImage(product.image);
             }
 
+
             const save = await prisma.product.create({
                 data: {
                     name: product.name,
                     description: product.description,
                     price: product.price,
                     image: imageUrl,
-                    category: product.category,
                     quantity: product.quantity || 0,
                     spice_level: product.spice_level,
                     features: product.features,
+                    original_price: product.original_price ?? null,
                     popular: product.popular || false,
+                    ...(product.categoryId !== undefined && { categoryId: product.categoryId }),
                 },
             });
-            return {
-                success: true,
-                message: "Product created successfully",
-                data: {
-                    ...save,
-                    imageUrl: save.image ? `${appConfig().app.url}/public/storage/${save.image.split('/').pop()}` : null
-                }
+
+            const productWithImageUrl = {
+                ...save,
+                imageUrl: save.image ? `${appConfig().app.url}/public/storage/${save.image.split('/').pop()}` : null
             };
+
+            return ApiResponseHelper.success(
+                productWithImageUrl,
+                "Product created successfully",
+                HttpStatus.CREATED,
+                "PRODUCT_CREATE_SUCCESS"
+            );
         } catch (error) {
-            if(error instanceof HttpException){
-                throw error;
-            }else{
-                throw new HttpException({
-                    success: false,
-                    message: error.message,
-                }, HttpStatus.INTERNAL_SERVER_ERROR);
-            }
+            return ApiResponseHelper.error(
+                error.message || 'Failed to create product',
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                'PRODUCT_CREATE_ERROR'
+            );
         }
     }
 
-    async updateProductById(id: string, product: UpdateProductDto) {
+    async updateProductById(id: string, product: UpdateProductDto): Promise<ApiResponse<Product>> {
         try {
             if (!id) {
-                throw new HttpException({
-                    success: false,
-                    message: "Invalid product ID",
-                }, HttpStatus.BAD_REQUEST);
+                return ApiResponseHelper.badRequest(
+                    "Invalid product ID",
+                    "INVALID_PRODUCT_ID"
+                );
             }
 
             // Check if product exists
@@ -182,22 +190,24 @@ export class ProductsService {
             });
 
             if (!existingProduct) {
-                throw new HttpException({
-                    success: false,
-                    message: "Product not found",
-                }, HttpStatus.NOT_FOUND);
+                return ApiResponseHelper.notFound(
+                    "Product not found",
+                    "PRODUCT_NOT_FOUND"
+                );
             }
 
             // Build updateData object dynamically
+            // console.log("product", product);
             const updateData: any = {};
             if (product.name !== undefined) updateData.name = product.name;
             if (product.description !== undefined) updateData.description = product.description;
             if (product.price !== undefined) updateData.price = product.price;
-            if (product.category !== undefined) updateData.category = product.category;
+            if (product.categoryId !== undefined) updateData.categoryId = product.categoryId;
             if (product.quantity !== undefined) updateData.quantity = product.quantity;
             if (product.spice_level !== undefined) updateData.spice_level = product.spice_level;
             if (product.features !== undefined) updateData.features = product.features;
             if (product.popular !== undefined) updateData.popular = product.popular;
+            if (product.original_price !== undefined) updateData.original_price = product.original_price;
 
             // Handle image upload if new image is provided
             if (product.image) {
@@ -217,34 +227,34 @@ export class ProductsService {
                 data: updateData,
             });
 
-            return {
-                success: true,
-                message: "Product updated successfully",
-                data: {
-                    ...updatedProduct,
-                    imageUrl: updatedProduct.image ? `${appConfig().app.url}/public/storage/product_image/${updatedProduct.image.split('/').pop()}` : null
-                }
+            const productWithImageUrl = {
+                ...updatedProduct,
+                imageUrl: updatedProduct.image ? `${appConfig().app.url}/public/storage/product_image/${updatedProduct.image.split('/').pop()}` : null
             };
+
+            return ApiResponseHelper.success(
+                productWithImageUrl,
+                "Product updated successfully",
+                HttpStatus.OK,
+                "PRODUCT_UPDATE_SUCCESS"
+            );
         } catch (error) {
-            if(error instanceof HttpException){
-                throw error;
-            }else{
-                throw new HttpException({
-                    success: false,
-                    message: error.message,
-                }, HttpStatus.INTERNAL_SERVER_ERROR);
-            }
+            return ApiResponseHelper.error(
+                error.message || 'Failed to update product',
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                'PRODUCT_UPDATE_ERROR'
+            );
         }
     }
 
 
-    async deleteProductById(id: string) {
+    async deleteProductById(id: string): Promise<ApiResponse<null>> {
         try {
             if (!id) {
-                throw new HttpException({
-                    success: false,
-                    message: "Invalid product ID",
-                }, HttpStatus.BAD_REQUEST);
+                return ApiResponseHelper.badRequest(
+                    "Invalid product ID",
+                    "INVALID_PRODUCT_ID"
+                );
             }
 
             // Check if product exists
@@ -253,10 +263,10 @@ export class ProductsService {
             });
 
             if (!product) {
-                throw new HttpException({
-                    success: false,
-                    message: "Product not found",
-                }, HttpStatus.NOT_FOUND);
+                return ApiResponseHelper.notFound(
+                    "Product not found",
+                    "PRODUCT_NOT_FOUND"
+                );
             }
 
             // Delete associated image if exists
@@ -264,30 +274,23 @@ export class ProductsService {
                 await this.fileUploadService.deleteProductImage(product.image);
             }
 
-            // we have to delete the image from the storage
-            if (product.image) {
-                await this.fileUploadService.deleteProductImage(product.image);
-            }
-
             // Delete the product
-            const deletedProduct = await prisma.product.delete({
+            await prisma.product.delete({
                 where: { id },
             });
 
-            return {
-                success: true,
-                message: "Product deleted successfully",
-                data: null
-            };
+            return ApiResponseHelper.success(
+                null,
+                "Product deleted successfully",
+                HttpStatus.OK,
+                "PRODUCT_DELETE_SUCCESS"
+            );
         } catch (error) {
-            if(error instanceof HttpException){
-                throw error;
-            }else{
-                throw new HttpException({
-                    success: false,
-                    message: error.message,
-                }, HttpStatus.INTERNAL_SERVER_ERROR);
-            }
+            return ApiResponseHelper.error(
+                error.message || 'Failed to delete product',
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                'PRODUCT_DELETE_ERROR'
+            );
         }
     }
 

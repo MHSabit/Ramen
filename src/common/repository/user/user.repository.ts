@@ -1,7 +1,7 @@
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import * as speakeasy from 'speakeasy';
 import * as QRCode from 'qrcode';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, User } from '@prisma/client';
 import appConfig from '../../../config/app.config';
 import { ArrayHelper } from '../../helper/array.helper';
 import { Role } from '../../guard/role/role.enum';
@@ -41,6 +41,30 @@ export class UserRepository {
     const user = await prisma.user.findFirst({
       where: {
         id: userId,
+      },
+      include: {
+        role_users: {
+          include: {
+            role: {
+              include: {
+                permission_roles: {
+                  include: {
+                    permission: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+    return user;
+  }
+
+  static async getUserDetailsByEmail(email: string) {
+    const user = await prisma.user.findFirst({
+      where: {
+        email: email,
       },
       include: {
         role_users: {
@@ -598,3 +622,6 @@ export class UserRepository {
     return user;
   }
 }
+
+// Export the User type for use in other modules
+export { User };

@@ -38,18 +38,17 @@ model User {
   deleted_at DateTime?
   status     Int?      @default(1) @db.SmallInt
 
-
   approved_at  DateTime?
   availability String?
-  email        String? @unique   // ✅ add this line
-  cart_id    String   @default(cuid()) @unique   // ✅ standalone, auto-generated
-  username   String? @unique
-  name       String? @db.VarChar(255)
-  first_name String? @db.VarChar(255)
-  last_name  String? @db.VarChar(255)
-  password   String? @db.VarChar(255)
-  domain     String? @unique
-  avatar     String?
+  email        String?   @unique // ✅ add this line
+  cart_id      String    @unique @default(cuid()) // ✅ standalone, auto-generated
+  username     String?   @unique
+  name         String?   @db.VarChar(255)
+  first_name   String?   @db.VarChar(255)
+  last_name    String?   @db.VarChar(255)
+  password     String?   @db.VarChar(255)
+  domain       String?   @unique
+  avatar       String?
 
   phone_number  String?
   country       String?
@@ -243,10 +242,30 @@ model PaymentTransaction {
   reference_number String?
   status           String?  @default("pending")
   raw_status       String?
-  amount           Decimal?
+  amount           Float? 
   currency         String?
-  paid_amount      Decimal?
+  paid_amount      Float? 
   paid_currency    String?
+
+  // Contact Information
+  contact_first_name String?
+  contact_last_name  String?
+  contact_email      String?
+  contact_phone      String?
+
+  // Shipping Address
+  shipping_address   String?
+  shipping_city      String?
+  shipping_state     String?
+  shipping_zip_code  String?
+
+  // Shipping Method
+  shipping_method    String? // 'standard', 'express', 'overnight'
+  shipping_cost      Float? 
+  shipping_days      String? // '3-5 business days', '1-2 business days', 'Next business day'
+
+  // Relationship to order items (purchased products)
+  order_items OrderItem[]
 
   @@map("payment_transactions")
 }
@@ -421,49 +440,83 @@ model UserSetting {
 }
 
 model Product {
-  id          String    @id @default(cuid())
-  name        String
-  description String?
-  price       Decimal   @db.Decimal(10, 2)
-  quantity    Int       @default(0)
-  category    String?
-  image       String?   // URL or path to the product image
-  spice_level Int?      @default(1)  // Spice level for ramen products
-  features    String?   // Product features
-  popular     Boolean   @default(false) // Whether product is popular
-  created_at  DateTime  @default(now())
-  updated_at  DateTime  @default(now())
-  deleted_at  DateTime?
+  id             String    @id @default(cuid())
+  name           String
+  description    String?
+  price          Float
+  quantity       Int       @default(0)
+  image          String? // URL or path to the product image
+  spice_level    Int?      @default(1) // Spice level for ramen products
+  features       String? // Product features
+  popular        Boolean   @default(false) // Whether product is popular
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @default(now())
+  deleted_at     DateTime?
+  original_price Int?      @default(0)
+
+  // Relationship to order items (when this product is purchased)
+  order_items OrderItem[]
+
+  categoryId String?
+  category   ProductCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   @@map("products")
 }
-
 
 model ProductCategory {
   id          String    @id @default(cuid())
   name        String    @unique
   description String?
-  image       String?   // URL or path to the product image
+  image       String? // URL or path to the product image
   icon        String    @default("Fish")
   color       String    @default("Pink to Orange")
   created_at  DateTime  @default(now())
   updated_at  DateTime  @default(now())
   deleted_at  DateTime?
+
+  // Back-reference to products
+  products Product[]
+
   @@map("product_categories")
 }
 
+// OrderItem model to store purchased products in transactions
+model OrderItem {
+  id         String    @id @default(cuid())
+  created_at DateTime  @default(now())
+  updated_at DateTime  @default(now())
+  deleted_at DateTime?
 
+  // Link to the transaction
+  transaction_id String
+  transaction    PaymentTransaction @relation(fields: [transaction_id], references: [id], onDelete: Cascade)
+
+  // Link to the product (optional, in case product is deleted)
+  product_id String?
+  product    Product? @relation(fields: [product_id], references: [id])
+
+  // Product details at time of purchase (snapshot)
+  product_name        String
+  product_description String?
+  product_price       Float
+  quantity            Int     @default(1)
+  total_price         Float 
+
+  delivery_status     String?   @default("pending")
+
+  @@map("order_items")
+}
 model Cart {
-  id           String   @id @default(cuid())
-  cart_id      String
-  product_id   String
-  quantity     Int      @default(1)
-  unit_price   Decimal  @db.Decimal(10,2)
-  created_at   DateTime @default(now())
-  updated_at   DateTime @updatedAt
+  id         String   @id @default(cuid())
+  cart_id    String
+  product_id String
+  quantity   Int      @default(1)
+  unit_price Float 
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
   @@map("carts")
 }
-
 
 // this table stores example
 // model Note {

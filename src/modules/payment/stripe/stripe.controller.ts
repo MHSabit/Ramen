@@ -1,11 +1,473 @@
-import { Controller, Post, Req, Headers } from '@nestjs/common';
+import { Controller, Post, Req, Headers, Body, UseGuards, Get, UseInterceptors, ClassSerializerInterceptor, Param } from '@nestjs/common';
 import { StripeService } from './stripe.service';
 import { Request } from 'express';
 import { TransactionRepository } from '../../../common/repository/transaction/transaction.repository';
+import { OrderItemRepository } from '../../../common/repository/order-item/order-item.repository';
+import { ProductRepository } from '../../../common/repository/product/product.repository';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { GetUser } from '../../auth/decorators/get-user.decorator';
+import { CreatePaymentDto } from './dto/create-payment.dto';
+import { PrismaService } from '../../../prisma/prisma.service';
+import { MailService } from '../../../mail/mail.service';
 
 @Controller('payment/stripe')
+@UseInterceptors(ClassSerializerInterceptor)
 export class StripeController {
-  constructor(private readonly stripeService: StripeService) {}
+  constructor(
+    private readonly stripeService: StripeService,
+    private readonly prisma: PrismaService,
+    private readonly mailService: MailService,
+  ) {}
+
+  /**
+   * Reduce product quantities after successful payment
+   * @param sessionId - Stripe session ID
+   */
+  private async reduceProductQuantitiesAfterPayment(sessionId: string) {
+    try {
+      // Get the transaction to find order items
+      const transaction = await TransactionRepository.getTransactionByReference(sessionId);
+      // console.log('transaction', transaction);
+      if (!transaction) {
+        throw new Error(`Transaction not found for session: ${sessionId}`);
+      }
+
+      // Get order items for this transaction
+      const orderItems = await OrderItemRepository.getOrderItemsByTransactionId(transaction.id);
+      if (!orderItems || orderItems.length === 0) {
+        // console.log(`No order items found for transaction: ${transaction.id}`);
+        return;
+      }
+      // console.log('orderItems', orderItems);
+      // Filter order items that have valid product IDs
+      const validOrderItems = orderItems.filter(item => item.product_id);
+      if (validOrderItems.length === 0) {
+        // console.log(`No valid product IDs found in order items for transaction: ${transaction.id}`);
+        return;
+      }
+      // console.log('validOrderItems', validOrderItems);
+      // Prepare products for quantity reduction
+      const productsToReduce = validOrderItems.map(item => ({
+        productId: item.product_id,
+        quantity: item.quantity
+      }));
+      // console.log('productsToReduce', productsToReduce);
+      // Reduce product quantities atomically
+      const updatedProducts = await ProductRepository.reduceMultipleProductQuantities(productsToReduce);
+      
+      // console.log(`Successfully reduced quantities for ${updatedProducts.length} products after payment:`, 
+      //   updatedProducts.map(p => `${p.name}: -${productsToReduce.find(pt => pt.productId === p.id)?.quantity} (remaining: ${p.quantity})`)
+      // );
+      // console.log('updatedProducts', updatedProducts);
+      return updatedProducts;
+    } catch (error) {
+      // console.error(`Error reducing product quantities for session ${sessionId}:`, error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Send email notifications for completed orders
+   * @param sessionId - Stripe session ID
+   */
+  private async sendOrderEmailNotifications(sessionId: string) {
+    try {
+      // Get transaction details
+      const transaction = await TransactionRepository.getTransactionByReference(sessionId);
+      if (!transaction) {
+        throw new Error(`Transaction not found for session: ${sessionId}`);
+      }
+
+      // Get order items
+      const orderItems = await OrderItemRepository.getOrderItemsByTransactionId(transaction.id);
+      if (!orderItems || orderItems.length === 0) {
+        console.log(`No order items found for transaction: ${transaction.id}`);
+        return;
+      }
+
+      // Get user details
+      const user = await this.prisma.user.findUnique({
+        where: { id: transaction.user_id },
+        select: {
+          id: true,
+          email: true,
+          first_name: true,
+          last_name: true,
+        },
+      });
+
+      if (!user) {
+        throw new Error(`User not found for transaction: ${transaction.id}`);
+      }
+
+      // Prepare order data for emails
+      const orderData = {
+        customerName: `${transaction.contact_first_name} ${transaction.contact_last_name}`,
+        customerEmail: transaction.contact_email,
+        customerPhone: transaction.contact_phone,
+        customerId: user.id,
+        orderNumber: sessionId,
+        orderDate: new Date().toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+        totalAmount: transaction.amount,
+        items: orderItems.map(item => ({
+          name: item.product_name,
+          quantity: item.quantity,
+          price: item.product_price,
+          spice_level: 'Medium', // Default spice level
+        })),
+        shippingAddress: transaction.shipping_address,
+        shippingCity: transaction.shipping_city,
+        shippingState: transaction.shipping_state,
+        shippingZipCode: transaction.shipping_zip_code,
+        shippingMethod: transaction.shipping_method,
+        shippingDays: parseInt(transaction.shipping_days) || 3,
+      };
+
+      // Send customer confirmation email
+      await this.mailService.sendOrderConfirmationEmail({
+        customerEmail: orderData.customerEmail,
+        customerName: orderData.customerName,
+        orderNumber: orderData.orderNumber,
+        orderDate: orderData.orderDate,
+        totalAmount: orderData.totalAmount,
+        items: orderData.items,
+        shippingAddress: orderData.shippingAddress,
+        shippingCity: orderData.shippingCity,
+        shippingState: orderData.shippingState,
+        shippingZipCode: orderData.shippingZipCode,
+        shippingMethod: orderData.shippingMethod,
+        shippingDays: orderData.shippingDays,
+      });
+
+      // Send admin notification email
+      const adminEmail = process.env.ADMIN_EMAIL || 'admin@example.com';
+      const adminDashboardUrl = `${process.env.ADMIN_DASHBOARD_URL || 'http://localhost:3000/admin'}/orders/${sessionId}`;
+      
+      await this.mailService.sendAdminOrderNotification({
+        adminEmail: adminEmail,
+        customerName: orderData.customerName,
+        customerEmail: orderData.customerEmail,
+        customerPhone: orderData.customerPhone,
+        customerId: orderData.customerId,
+        orderNumber: orderData.orderNumber,
+        orderDate: orderData.orderDate,
+        totalAmount: orderData.totalAmount,
+        items: orderData.items,
+        shippingAddress: orderData.shippingAddress,
+        shippingCity: orderData.shippingCity,
+        shippingState: orderData.shippingState,
+        shippingZipCode: orderData.shippingZipCode,
+        shippingMethod: orderData.shippingMethod,
+        shippingDays: orderData.shippingDays,
+        adminDashboardUrl: adminDashboardUrl,
+      });
+
+      console.log(`Email notifications sent for order ${sessionId}`);
+    } catch (error) {
+      console.error(`Error sending email notifications for session ${sessionId}:`, error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Restore product quantities after refund/cancellation
+   * @param sessionId - Stripe session ID
+   */
+  private async restoreProductQuantitiesAfterRefund(sessionId: string) {
+    try {
+      // Get the transaction to find order items
+      const transaction = await TransactionRepository.getTransactionByReference(sessionId);
+      if (!transaction) {
+        throw new Error(`Transaction not found for session: ${sessionId}`);
+      }
+
+      // Get order items for this transaction
+      const orderItems = await OrderItemRepository.getOrderItemsByTransactionId(transaction.id);
+      if (!orderItems || orderItems.length === 0) {
+        // console.log(`No order items found for transaction: ${transaction.id}`);
+        return;
+      }
+
+      // Filter order items that have valid product IDs
+      const validOrderItems = orderItems.filter(item => item.product_id);
+      if (validOrderItems.length === 0) {
+        // console.log(`No valid product IDs found in order items for transaction: ${transaction.id}`);
+        return;
+      }
+
+      // Restore product quantities
+      const restoredProducts = [];
+      for (const item of validOrderItems) {
+        try {
+          const restoredProduct = await ProductRepository.restoreProductQuantity(
+            item.product_id,
+            item.quantity
+          );
+          restoredProducts.push(restoredProduct);
+        } catch (error) {
+          // console.error(`Failed to restore quantity for product ${item.product_id}:`, error.message);
+        }
+      }
+      
+      // console.log(`Successfully restored quantities for ${restoredProducts.length} products after refund:`, 
+      //   restoredProducts.map(p => `${p.name}: +${validOrderItems.find(item => item.product_id === p.id)?.quantity} (current: ${p.quantity})`)
+      // );
+
+      return restoredProducts;
+    } catch (error) {
+      // console.error(`Error restoring product quantities for session ${sessionId}:`, error.message);
+      throw error;
+    }
+  }
+
+  
+
+
+  @Post('create-payment')
+  @UseGuards(JwtAuthGuard)
+  async createPayment(
+    @Body() createPaymentDto: CreatePaymentDto,
+    @GetUser('userId') userId: string,
+  ) {
+      return await this.stripeService.createPayment({
+        userId,
+        products: createPaymentDto.products,
+        currency: createPaymentDto.currency,
+        description: createPaymentDto.description,
+        total_amount: createPaymentDto.total_amount,
+        // Contact Information
+        contact_first_name: createPaymentDto.contact_first_name,
+        contact_last_name: createPaymentDto.contact_last_name,
+        contact_email: createPaymentDto.contact_email,
+        contact_phone: createPaymentDto.contact_phone,
+        // Shipping Address
+        shipping_address: createPaymentDto.shipping_address,
+        shipping_city: createPaymentDto.shipping_city,
+        shipping_state: createPaymentDto.shipping_state,
+        shipping_zip_code: createPaymentDto.shipping_zip_code,
+        // Shipping Method
+        shipping_method: createPaymentDto.shipping_method,
+        shipping_cost: createPaymentDto.shipping_cost,
+        shipping_days: createPaymentDto.shipping_days,
+      });
+      
+  }
+
+  @Get('transactions')
+  @UseGuards(JwtAuthGuard)
+  async getUserTransactions(@GetUser('userId') userId: string) {
+      return await TransactionRepository.getTransactionsByUserId(userId);
+  }
+
+  @Get('transactions/successful')
+  @UseGuards(JwtAuthGuard)
+  async getUserSuccessfulTransactions(@GetUser('userId') userId: string) {
+    try {
+      const transactions = await TransactionRepository.getSuccessfulTransactionsByUserId(userId);
+      return {
+        success: true,
+        message: 'User successful transactions fetched successfully',
+        data: transactions,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message,
+        data: null,
+      };
+    }
+  }
+
+  @Get('purchases')
+  @UseGuards(JwtAuthGuard)
+  async getUserPurchases(@GetUser('userId') userId: string) {
+    try {
+      const purchases = await OrderItemRepository.getOrderItemsByUserId(userId);
+      return {
+        success: true,
+        message: 'User purchases fetched successfully',
+        data: purchases,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message,
+        data: null,
+      };
+    }
+  }
+
+  @Get('purchases/successful')
+  @UseGuards(JwtAuthGuard)
+  async getUserSuccessfulPurchases(@GetUser('userId') userId: string) {
+    try {
+      const purchases = await OrderItemRepository.getSuccessfulOrderItemsByUserId(userId);
+      return {
+        success: true,
+        message: 'User successful purchases fetched successfully',
+        data: purchases,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message,
+        data: null,
+      };
+    }
+  }
+
+  @Get('transaction/:transactionId')
+  @UseGuards(JwtAuthGuard)
+  async getTransactionItems(
+    @GetUser('userId') userId: string,
+    @Req() req: Request,
+  ) {
+    try {
+      const transactionId = req.params.transactionId;
+      // console.log('transactionId', transactionId);
+      // Verify the transaction belongs to the user
+      const transaction = await TransactionRepository.getTransactionByReference(transactionId);
+      if (!transaction || transaction.user_id !== userId) {
+        return {
+          success: false,
+          message: 'Transaction not found or access denied',
+          data: null,
+        };
+      }
+
+      // const items = await OrderItemRepository.getOrderItemsByTransactionId(transactionId);
+      return {
+        success: true,
+        message: 'Transaction items fetched successfully',
+        data: transaction,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message,
+        data: null,
+      };
+    }
+  }
+
+  @Post('refund')
+  @UseGuards(JwtAuthGuard)
+  async processRefund(
+    @Body() refundData: { sessionId: string; reason?: string },
+    @GetUser() user: any
+  ) {
+    try {
+      const { sessionId, reason } = refundData;
+
+      if (!sessionId) {
+        return {
+          success: false,
+          message: 'Session ID is required',
+          data: null,
+        };
+      }
+
+      // Get the transaction
+      const transaction = await TransactionRepository.getTransactionByReference(sessionId);
+      if (!transaction) {
+        return {
+          success: false,
+          message: 'Transaction not found',
+          data: null,
+        };
+      }
+
+      // Check if transaction belongs to the user
+      if (transaction.user_id !== user.id) {
+        return {
+          success: false,
+          message: 'Unauthorized access to transaction',
+          data: null,
+        };
+      }
+
+      // Check if transaction is eligible for refund
+      if (transaction.status !== 'succeeded') {
+        return {
+          success: false,
+          message: 'Transaction is not eligible for refund',
+          data: null,
+        };
+      }
+
+      // Update transaction status to refunded
+      await TransactionRepository.updateTransaction({
+        reference_number: sessionId,
+        status: 'refunded',
+        raw_status: 'refunded',
+      });
+
+      // Restore product quantities
+      try {
+        await this.restoreProductQuantitiesAfterRefund(sessionId);
+      } catch (error) {
+        console.error('Failed to restore product quantities during refund:', error.message);
+        // Continue with refund even if quantity restoration fails
+      }
+
+      return {
+        success: true,
+        message: 'Refund processed successfully',
+        data: {
+          sessionId,
+          reason,
+          refundedAt: new Date().toISOString(),
+        },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message,
+        data: null,
+      };
+    }
+  }
+
+  @Get('products')
+  @UseGuards(JwtAuthGuard)
+  async getAvailableProducts() {
+    try {
+      const products = await this.prisma.product.findMany({
+        select: {
+          id: true,
+          name: true,
+          price: true,
+          description: true,
+          category: true,
+          spice_level: true,
+          popular: true,
+        },
+        orderBy: {
+          name: 'asc',
+        },
+      });
+
+      return {
+        success: true,
+        message: 'Available products fetched successfully',
+        data: products,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message,
+        data: null,
+      };
+    }
+  }
+
+  
 
   @Post('webhook')
   async handleWebhook(
@@ -13,21 +475,64 @@ export class StripeController {
     @Req() req: Request,
   ) {
     try {
-      const payload = req.rawBody.toString();
+      // Validate signature presence
+      if (!signature) {
+        // console.error('Missing Stripe signature');
+        return { received: false, error: 'Missing signature' };
+      }
+
+      const payload = req.rawBody?.toString();
+      if (!payload) {
+        // console.error('Missing webhook payload');
+        return { received: false, error: 'Missing payload' };
+      }
+
       const event = await this.stripeService.handleWebhook(payload, signature);
 
       // Handle events
-      switch (event.type) {
+      switch (event.data.object.type) {
         case 'customer.created':
           break;
-        case 'payment_intent.created':
+        case 'checkout.session.completed':
+          const session = event.data.object;
+          // console.log('Checkout session completed:', session.id);
+          
+          // Check if transaction already processed (idempotency)
+          const existingTransaction = await TransactionRepository.getTransactionByReference(session.id);
+          if (existingTransaction && existingTransaction.status === 'succeeded') {
+            // console.log('Transaction already processed:', session.id);
+            break;
+          }
+          
+          // Update transaction status in database
+          await TransactionRepository.updateTransaction({
+            reference_number: session.id,
+            status: 'succeeded',
+            paid_amount: session.amount_total / 100, // amount in dollars
+            paid_currency: session.currency,
+            raw_status: session.payment_status,
+          });
+
+          // Reduce product quantities after successful payment
+          try {
+            await this.reduceProductQuantitiesAfterPayment(session.id);
+          } catch (error) {
+            console.error('Failed to reduce product quantities:', error.message);
+            // Note: In production, you might want to implement a retry mechanism
+            // or send an alert to administrators for manual intervention
+          }
+
+          // Send email notifications
+          try {
+            await this.sendOrderEmailNotifications(session.id);
+          } catch (error) {
+            console.error('Failed to send order email notifications:', error.message);
+            // Continue processing even if email sending fails
+          }
           break;
         case 'payment_intent.succeeded':
           const paymentIntent = event.data.object;
-          // create tax transaction
-          // await StripePayment.createTaxTransaction(
-          //   paymentIntent.metadata['tax_calculation'],
-          // );
+          // console.log('Payment intent succeeded:', paymentIntent.id);
           // Update transaction status in database
           await TransactionRepository.updateTransaction({
             reference_number: paymentIntent.id,
@@ -39,14 +544,27 @@ export class StripeController {
           break;
         case 'payment_intent.payment_failed':
           const failedPaymentIntent = event.data.object;
+          // console.log('Payment failed:', failedPaymentIntent.id);
           // Update transaction status in database
           await TransactionRepository.updateTransaction({
             reference_number: failedPaymentIntent.id,
             status: 'failed',
             raw_status: failedPaymentIntent.status,
           });
+          break;
+        case 'checkout.session.expired':
+          const expiredSession = event.data.object;
+          // console.log('Checkout session expired:', expiredSession.id);
+          // Update transaction status in database
+          await TransactionRepository.updateTransaction({
+            reference_number: expiredSession.id,
+            status: 'expired',
+            raw_status: 'expired',
+          });
+          break;
         case 'payment_intent.canceled':
           const canceledPaymentIntent = event.data.object;
+          // console.log('Payment intent canceled:', canceledPaymentIntent.id);
           // Update transaction status in database
           await TransactionRepository.updateTransaction({
             reference_number: canceledPaymentIntent.id,
@@ -56,6 +574,7 @@ export class StripeController {
           break;
         case 'payment_intent.requires_action':
           const requireActionPaymentIntent = event.data.object;
+          // console.log('Payment intent requires action:', requireActionPaymentIntent.id);
           // Update transaction status in database
           await TransactionRepository.updateTransaction({
             reference_number: requireActionPaymentIntent.id,
@@ -65,20 +584,27 @@ export class StripeController {
           break;
         case 'payout.paid':
           const paidPayout = event.data.object;
-          console.log(paidPayout);
+          // console.log(paidPayout);
           break;
         case 'payout.failed':
           const failedPayout = event.data.object;
-          console.log(failedPayout);
+          // console.log(failedPayout);
           break;
         default:
-          console.log(`Unhandled event type ${event.type}`);
+          // console.log(`Unhandled event type ${event.type}`);
       }
 
       return { received: true };
     } catch (error) {
-      console.error('Webhook error', error);
+      // console.error('Webhook error', error);
       return { received: false };
     }
+  }
+
+  @Get('payment-transactions/:transactionId')
+  @UseGuards(JwtAuthGuard)
+  async getTransaction(@Param('transactionId') transactionId: string) {
+      return await this.stripeService.getTransactionById(transactionId);
+      
   }
 }

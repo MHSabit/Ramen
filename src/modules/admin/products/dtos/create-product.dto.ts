@@ -8,24 +8,29 @@ import {
   export class CreateProductDto {
     @ApiProperty({ description: 'Product name', example: 'Tonkotsu Ramen' })
     @IsNotEmpty()
-    @IsString()
+    @IsString() 
     name: string;
-  
-    @ApiPropertyOptional({ description: 'Product category (defaults to "all products")', example: 'Ramen' })
-    @IsOptional()
+
+    @ApiProperty({ description: 'Product category ID', example: 'category-uuid-here' })
     @IsString()
-    @Transform(({ value }) => (typeof value === 'string' && value.trim()) ? value : 'all products')
-    category?: string;
-  
-    @ApiPropertyOptional({ description: 'Product description', example: 'Rich pork bone broth ramen' })
     @IsOptional()
+    categoryId?: string;
+
+    @ApiProperty({ description: 'Product description', example: 'Rich pork bone broth ramen', required: false })
+    @IsNotEmpty()
     @IsString()
-    description?: string;
+    description: string;
   
     @ApiProperty({ description: 'Product price', example: '12.99' })
     @Type(() => Number)
     @IsNumber()
     price: number;
+
+    @ApiPropertyOptional({ description: 'Product original price', example: '12.99' })
+    @IsOptional()
+    @Type(() => Number)
+    @IsNumber()
+    original_price?: number;
   
     @ApiPropertyOptional({ description: 'Product image file', type: 'string', format: 'binary' })
     @IsOptional()
@@ -33,7 +38,7 @@ import {
   
     @ApiPropertyOptional({ description: 'Product quantity', example: '50' })
     @Type(() => Number)
-    @IsOptional()
+    @IsNotEmpty()
     @IsInt()
     @Min(0)
     quantity?: number;
@@ -59,4 +64,6 @@ import {
     @IsBoolean()
     @Transform(({ value }) => value === 'true' || value === true)
     popular?: boolean = false;
+
+   
   }

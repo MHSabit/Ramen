@@ -16,7 +16,6 @@ export class CartController {
     @Param('cart_id') cart_id: string,
     @Req() req: Request
     ) {
-        console.log('cart id inside controller', cart_id, req.user.userId);
         return this.cartService.getallproductByCartId(cart_id, req.user.userId);
     }
 
@@ -26,7 +25,6 @@ export class CartController {
         @Body() body: addToProductDto, 
         @Param('cart_id') cart_id: string   // ✅ use Param here
     ) {
-        console.log('cart id inside controller', cart_id, req.user.userId);
         return this.cartService.addToCart(cart_id, req.body, req.user.userId);
     }
 
@@ -36,8 +34,6 @@ export class CartController {
         @Body() body: addToProductDto,
         @Req() req: Request
     ) {
-        console.log('cart_id:', cart_id);
-        // return "update";
         return this.cartService.updateCartItem(cart_id, body, req.user.userId);
     }
 
@@ -47,8 +43,17 @@ export class CartController {
         @Param('product_id') product_id: string,
         @Req() req: Request
     ) {
-        console.log('cart_id:', cart_id);
-        console.log('product_id:', product_id);
-        return this.cartService.removeCartItem(cart_id, product_id, req.user.userId);
+        const removeCartItem = await this.cartService.removeCartItem(cart_id, product_id, req.user.userId);
+        return removeCartItem;
     }
+
+
+    @Delete()
+    async clearCacrt(
+        @Req() req: Request
+    ) {
+        return this.cartService.clearCart(req.user.userId);
+
+    }
+
 }

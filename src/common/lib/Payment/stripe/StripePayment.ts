@@ -47,6 +47,9 @@ export class StripePayment {
     name: string;
     email: string;
   }): Promise<stripe.Customer> {
+    // console.log(user_id,
+    // name,
+    // email,);
     const customer = await Stripe.customers.create({
       name: name,
       email: email,
@@ -55,6 +58,7 @@ export class StripePayment {
       },
       description: 'New Customer',
     });
+    // console.log(' customer Details',customer);
     return customer;
   }
 
@@ -150,32 +154,81 @@ export class StripePayment {
    * @param price
    * @returns
    */
-  static async createCheckoutSession() {
+  static async createCheckoutSession({
+    transaction_id,
+    order_id,
+    customer_id,
+    products,
+    currency = 'usd',
+    description,
+    metadata,
+    shipping_cost = 0,
+    shipping_method,
+  }: {
+    transaction_id: string;
+    order_id: string;
+    customer_id?: string;
+    products: Array<{
+      name: string;
+      price: number;
+      quantity?: number;
+      description?: string;
+      product_id?: string;
+    }>;
+    currency?: string;
+    description?: string;
+    metadata?: stripe.MetadataParam;
+    shipping_cost?: number;
+    shipping_method?: string;
+  }) {
     const success_url = `${
-      appConfig().app.url
-    }/success?session_id={CHECKOUT_SESSION_ID}`;
-    const cancel_url = `${appConfig().app.url}/failed`;
+      appConfig().app.client_app_url
+    }/payment/success?transaction_id=${transaction_id}&order_id=${order_id}`;
+    const cancel_url = `${appConfig().app.client_app_url}/payment/failed`;
 
-    const session = await Stripe.checkout.sessions.create({
+    // Create line items for each product
+    const line_items = products.map(product => ({
+      price_data: {
+        currency: currency,
+        product_data: {
+          name: product.name,
+          description: product.description || description,
+        },
+        unit_amount: product.price * 100, // Convert to cents
+      },
+      quantity: product.quantity || 1,
+    }));
+
+    // Add shipping as a line item if shipping cost > 0
+    if (shipping_cost > 0) {
+      line_items.push({
+        price_data: {
+          currency: currency,
+          product_data: {
+            name: `Shipping (${shipping_method || 'Standard'})`,
+            description: 'Shipping and handling',
+          },
+          unit_amount: shipping_cost * 100, // Convert to cents
+        },
+        quantity: 1,
+      });
+    }
+
+    const sessionData: stripe.Checkout.SessionCreateParams = {
       mode: 'payment',
       payment_method_types: ['card'],
-      line_items: [
-        {
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: 'Sample Product',
-            },
-            unit_amount: 2000, // $20.00
-          },
-          quantity: 1,
-        },
-      ],
-
+      line_items: line_items,
       success_url: success_url,
       cancel_url: cancel_url,
-      // automatic_tax: { enabled: true },
-    });
+      metadata: metadata,
+    };
+
+    // Add customer if provided
+    if (customer_id) {
+      sessionData.customer = customer_id;
+    }
+
+    const session = await Stripe.checkout.sessions.create(sessionData);
     return session;
   }
 
@@ -194,6 +247,7 @@ export class StripePayment {
     }/success?session_id={CHECKOUT_SESSION_ID}`;
     const cancel_url = `${appConfig().app.url}/failed`;
 
+
     const session = await Stripe.checkout.sessions.create({
       mode: 'subscription',
       payment_method_types: ['card'],
@@ -211,6 +265,7 @@ export class StripePayment {
       cancel_url: cancel_url,
       // automatic_tax: { enabled: true },
     });
+
     return session;
   }
 

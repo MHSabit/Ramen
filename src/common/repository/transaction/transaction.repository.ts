@@ -8,21 +8,21 @@ export class TransactionRepository {
    * @returns
    */
   static async createTransaction({
-    booking_id,
+    user_id,
     amount,
     currency,
     reference_number,
     status = 'pending',
   }: {
-    booking_id: string;
+    user_id: string;
     amount?: number;
     currency?: string;
     reference_number?: string;
     status?: string;
   }) {
     const data = {};
-    if (booking_id) {
-      data['booking_id'] = booking_id;
+    if (user_id) {
+      data['user_id'] = user_id;
     }
     if (amount) {
       data['amount'] = Number(amount);
@@ -44,7 +44,58 @@ export class TransactionRepository {
   }
 
   /**
-   * Update transaction
+   * Update transaction by ID
+   * @returns
+   */
+  static async updateTransactionById({
+    id,
+    reference_number,
+    status = 'pending',
+    paid_amount,
+    paid_currency,
+    raw_status,
+  }: {
+    id: string;
+    reference_number?: string;
+    status?: string;
+    paid_amount?: number;
+    paid_currency?: string;
+    raw_status?: string;
+  }) {
+    const data = {};
+    const order_data = {};
+    if (status) {
+      data['status'] = status;
+      order_data['payment_status'] = status;
+    }
+    if (paid_amount) {
+      data['paid_amount'] = Number(paid_amount);
+      order_data['paid_amount'] = Number(paid_amount);
+    }
+    if (paid_currency) {
+      data['paid_currency'] = paid_currency;
+      order_data['paid_currency'] = paid_currency;
+    }
+    if (raw_status) {
+      data['raw_status'] = raw_status;
+      order_data['payment_raw_status'] = raw_status;
+    }
+    if (reference_number) {
+      data['reference_number'] = reference_number;
+    }
+
+    return await prisma.paymentTransaction.update({
+      where: {
+        id: id,
+      },
+      data: {
+        ...data,
+      },
+    });
+  }
+
+  /**
+   * Update transaction by reference number
    * @returns
    */
   static async updateTransaction({
@@ -78,7 +129,7 @@ export class TransactionRepository {
       data['raw_status'] = raw_status;
       order_data['payment_raw_status'] = raw_status;
     }
-
+    // console.log('reference_number', reference_number);
     const paymentTransaction = await prisma.paymentTransaction.findMany({
       where: {
         reference_number: reference_number,
@@ -96,13 +147,66 @@ export class TransactionRepository {
     //     },
     //   });
     // }
-
+    // console.log('data', data);
+    // console.log('paymentTransaction', paymentTransaction);
     return await prisma.paymentTransaction.updateMany({
       where: {
         reference_number: reference_number,
       },
       data: {
         ...data,
+      },
+    });
+  }
+
+  /**
+   * Get transactions by user ID
+   * @returns
+   */
+  static async getTransactionsByUserId(user_id: string) {
+    return await prisma.paymentTransaction.findMany({
+      where: {
+        user_id: user_id,
+      },
+      orderBy: {
+        created_at: 'desc',
+      },
+    });
+  }
+
+  static async getTransactionById(id: string) {
+    return await prisma.paymentTransaction.findUnique({
+      where: {
+        id: id,
+      },
+    });
+  }
+
+  /**
+   * Get successful transactions by user ID
+   * @returns
+   */
+  static async getSuccessfulTransactionsByUserId(user_id: string) {
+    return await prisma.paymentTransaction.findMany({
+      where: {
+        user_id: user_id,
+        status: 'succeeded',
+      },
+      orderBy: {
+        created_at: 'desc',
+      },
+    });
+  }
+
+  /**
+   * Get transaction by reference number (Stripe session/payment intent ID)
+   * @returns
+   */
+  static async getTransactionByReference(reference_number: string) {
+    // console.log('reference_number', reference_number);
+    return await prisma.paymentTransaction.findFirst({
+      where: {
+        reference_number: reference_number,
       },
     });
   }

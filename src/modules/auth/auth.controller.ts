@@ -22,8 +22,13 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { JwtRefreshAuthGuard } from './guards/jwt-refresh-auth.guard';
 import appConfig from '../../config/app.config';
 import { AuthGuard } from '@nestjs/passport';
+import { AuthEmailLoginDto } from './dto/auth-email-login.dto';
+import { ApiResponse } from '../../types/api-response.type';
+import { ApiResponseHelper } from '../../common/helpers/api-response.helper';
+import { UserRepository } from '../../common/repository/user/user.repository';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -34,54 +39,20 @@ export class AuthController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Get('me')
-  async me(@Req() req: Request) {
-    try {
-      const user_id = req.user.userId;
-
-      const response = await this.authService.me(user_id);
-
-      return response;
-    } catch (error) {
-      return {
-        success: false,
-        message: 'Failed to fetch user details',
-        data:null
-      };
-    }
+  async me(@Req() req: Request): Promise<ApiResponse> {
+    const user_id = req.user.userId;
+    return this.authService.me(user_id);
   }
 
   @ApiOperation({ summary: 'Register a user' })
   @Post('register')
-  async create(@Body() data: CreateUserDto) {
+  async create(@Body() data: CreateUserDto): Promise<ApiResponse> {
     try {
       const first_name = data.first_name;
       const last_name = data.last_name;
       const email = data.email;
       const password = data.password;
       const type = data.type;
-
-     
-      if (!first_name) {
-        throw new HttpException(
-          'First name not provided',
-          HttpStatus.UNAUTHORIZED,
-        );
-      }
-      if (!last_name) {
-        throw new HttpException(
-          'Last name not provided',
-          HttpStatus.UNAUTHORIZED,
-        );
-      }
-      if (!email) {
-        throw new HttpException('Email not provided', HttpStatus.UNAUTHORIZED);
-      }
-      if (!password) {
-        throw new HttpException(
-          'Password not provided',
-          HttpStatus.UNAUTHORIZED,
-        );
-      }
 
       const response = await this.authService.register({
         first_name: first_name,
@@ -91,14 +62,13 @@ export class AuthController {
         type: type,
       });
 
-
       return response;
     } catch (error) {
-      return {
-        success: false,
-        message: error.message,
-        data:null
-      };
+      return ApiResponseHelper.error(
+        error.message || 'Registration failed',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        'REGISTRATION_ERROR',
+      );
     }
   }
 
@@ -108,60 +78,34 @@ export class AuthController {
   // login user
   // login user
   @ApiOperation({ summary: 'Login user' })
-  @UseGuards(LocalAuthGuard)
   @Post('login')
-  async login(@Req() req: Request, @Res() res: Response) {
-    console.log(req.user);
-    try {
-      const user_id = req.user.id;
-
-      const user_email = req.user.email;
-
-      const response = await this.authService.login({
-        userId: user_id,
-        email: user_email,
-      });
-
-      // store to secure cookies
-      res.cookie('refresh_token', response.authorization.refresh_token, {
-        httpOnly: true,
-        secure: true,
-        maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-      });
-
-      res.json(response);
-    } catch (error) {
-      return {
-        success: false,
-        message: error.message,
-        data:null
-      };
-    }
+  async login(@Body() loginDto: AuthEmailLoginDto): Promise<ApiResponse> {
+    return this.authService.login(loginDto);
   }
 
   @ApiOperation({ summary: 'Refresh token' })
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtRefreshAuthGuard)
   @Post('refresh-token')
   async refreshToken(
     @Req() req: Request,
-    @Body() body: { refresh_token: string },
-  ) {
+  ): Promise<ApiResponse> {
     try {
       const user_id = req.user.userId;
-
-      const response = await this.authService.refreshToken(
-        user_id,
-        body.refresh_token,
-      );
+      
+      // console.log('Refresh token request for user:', user_id);
+      
+      const response = await this.authService.refreshToken({
+        userId: user_id,
+      });
 
       return response;
     } catch (error) {
-      return {
-        success: false,
-        message: error.message,
-        data:null
-      };
+      return ApiResponseHelper.error(
+        error.message || 'Internal server error',
+        500,
+        'REFRESH_TOKEN_ERROR',
+      );
     }
   }
 
@@ -242,6 +186,7 @@ export class AuthController {
   @Post('forgot-password')
   async forgotPassword(@Body() data: { email: string }) {
     try {
+      // console.log("data", data);
       const email = data.email;
       if (!email) {
         throw new HttpException('Email not provided', HttpStatus.UNAUTHORIZED);

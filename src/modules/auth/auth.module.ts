@@ -3,6 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
 import { AuthController } from './auth.controller';
 import appConfig from '../../config/app.config';
@@ -18,16 +19,33 @@ import { GoogleStrategy } from './strategies/google.strategy';
     //   signOptions: { expiresIn: appConfig().jwt.expiry },
     // }),
     JwtModule.registerAsync({
-      useFactory: async () => ({
-        secret: appConfig().jwt.secret,
-        signOptions: { expiresIn: appConfig().jwt.expiry },
-      }),
+      useFactory: async () => {
+        const jwtSecret = appConfig().jwt.secret;
+        const jwtRefreshSecret = appConfig().jwt.refresh_secret;
+        const jwtExpiry = appConfig().jwt.expiry;
+        
+        // console.log('JWT Module - Access Secret:', jwtSecret);
+        // console.log('JWT Module - Access Secret type:', typeof jwtSecret);
+        // console.log('JWT Module - Access Secret length:', jwtSecret?.length);
+        // console.log('JWT Module - Refresh Secret:', jwtRefreshSecret);
+        // console.log('JWT Module - JWT Expiry:', jwtExpiry);
+        
+        if (!jwtSecret) {
+          // console.error('JWT Module - CRITICAL ERROR: No JWT secret found!');
+          throw new Error('JWT secret is not configured');
+        }
+        
+        return {
+          secret: jwtSecret,
+          signOptions: { expiresIn: jwtExpiry },
+        };
+      },
     }),
     PrismaModule,
     MailModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, LocalStrategy, JwtStrategy, GoogleStrategy],
+  providers: [AuthService, LocalStrategy, JwtStrategy, JwtRefreshStrategy, GoogleStrategy],
   exports: [AuthService],
 })
 export class AuthModule {}
