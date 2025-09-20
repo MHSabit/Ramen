@@ -1,11 +1,328 @@
-<p>Hey <%= name %></p>
-
-<p>
-  This is your otp: <%= otp %>
-</p>
-
-<p>
-  Regards,
-  <br />
-  <%= process.env.APP_NAME %>
-</p>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Verification</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px 30px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="75" cy="75" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="50" cy="10" r="0.5" fill="rgba(255,255,255,0.05)"/><circle cx="10" cy="60" r="0.5" fill="rgba(255,255,255,0.05)"/><circle cx="90" cy="40" r="0.5" fill="rgba(255,255,255,0.05)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+            opacity: 0.3;
+        }
+        
+        .header-content {
+            position: relative;
+            z-index: 1;
+        }
+        
+        .logo {
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: 700;
+            color: white;
+        }
+        
+        .header h1 {
+            color: white;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+        
+        .header p {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 16px;
+            font-weight: 400;
+        }
+        
+        .content {
+            padding: 50px 40px;
+        }
+        
+        .greeting {
+            font-size: 18px;
+            color: #1f2937;
+            margin-bottom: 24px;
+            font-weight: 500;
+        }
+        
+        .main-text {
+            font-size: 16px;
+            color: #4b5563;
+            line-height: 1.6;
+            margin-bottom: 32px;
+        }
+        
+        .otp-section {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border: 2px dashed #cbd5e1;
+            border-radius: 12px;
+            padding: 32px;
+            text-align: center;
+            margin: 32px 0;
+            position: relative;
+        }
+        
+        .otp-section::before {
+            content: '🔐';
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .otp-label {
+            font-size: 14px;
+            color: #64748b;
+            margin-bottom: 16px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .otp-code {
+            font-size: 36px;
+            font-weight: 700;
+            color: #1e40af;
+            letter-spacing: 8px;
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+            background: white;
+            padding: 20px 32px;
+            border-radius: 8px;
+            display: inline-block;
+            border: 2px solid #e2e8f0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+        
+        .info-box {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            border-left: 4px solid #3b82f6;
+            padding: 20px;
+            margin: 24px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .info-box h3 {
+            color: #1e40af;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .info-box ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .info-box li {
+            color: #1e40af;
+            font-size: 14px;
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+        
+        .info-box li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #10b981;
+            font-weight: bold;
+        }
+        
+        .security-notice {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border: 1px solid #f59e0b;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 24px 0;
+        }
+        
+        .security-notice strong {
+            color: #92400e;
+            font-size: 14px;
+            display: block;
+            margin-bottom: 8px;
+        }
+        
+        .security-notice p {
+            color: #92400e;
+            font-size: 14px;
+            margin: 0;
+        }
+        
+        .footer {
+            background: #f8fafc;
+            padding: 30px 40px;
+            text-align: center;
+            border-top: 1px solid #e2e8f0;
+        }
+        
+        .footer-content {
+            margin-bottom: 20px;
+        }
+        
+        .app-name {
+            font-weight: 600;
+            color: #667eea;
+            font-size: 16px;
+        }
+        
+        .footer-text {
+            color: #64748b;
+            font-size: 14px;
+            margin: 0;
+        }
+        
+        .footer-small {
+            color: #9ca3af;
+            font-size: 12px;
+            margin-top: 16px;
+        }
+        
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
+            margin: 20px 0;
+        }
+        
+        @media (max-width: 600px) {
+            .email-container {
+                margin: 10px;
+                border-radius: 12px;
+            }
+            
+            .content {
+                padding: 30px 20px;
+            }
+            
+            .otp-code {
+                font-size: 28px;
+                letter-spacing: 4px;
+                padding: 16px 24px;
+            }
+            
+            .header {
+                padding: 30px 20px;
+            }
+            
+            .footer {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <div class="header-content">
+                <!-- <div class="logo">
+                    <%= process.env.APP_NAME.charAt(0).toUpperCase() %>
+                </div> -->
+                <h1>Email Verification</h1>
+                <p>Complete your account setup</p>
+            </div>
+        </div>
+        
+        <div class="content">
+            <div class="greeting">
+                Hello <strong><%= name %></strong>,
+            </div>
+            
+            <div class="main-text">
+                Welcome to <strong><%= process.env.APP_NAME %></strong>! We're excited to have you on board. 
+                To complete your registration and secure your account, please verify your email address using the code below.
+            </div>
+            
+            <div class="otp-section">
+                <div class="otp-label">Your Verification Code</div>
+                <div class="otp-code"><%= otp %></div>
+            </div>
+            
+            <div class="info-box">
+                <h3>📋 How to verify your email</h3>
+                <ul>
+                    <li>Enter the 6-digit code above in the verification field</li>
+                    <li>This code expires in 10 minutes for security</li>
+                    <li>If you didn't request this, please ignore this email</li>
+                    <li>Keep this code confidential and don't share it</li>
+                </ul>
+            </div>
+            
+            <div class="security-notice">
+                <strong>🛡️ Security Notice</strong>
+                <p>Never share this verification code with anyone. Our team will never ask for your verification code via email, phone, or any other method.</p>
+            </div>
+        </div>
+        
+        <div class="divider"></div>
+        
+        <div class="footer">
+            <div class="footer-content">
+                <p class="footer-text">
+                    Best regards,<br>
+                    <span class="app-name">The <%= process.env.APP_NAME %> Team</span>
+                </p>
+            </div>
+            <p class="footer-small">
+                This is an automated message. Please do not reply to this email.<br>
+                &copy; <%= new Date().getFullYear() %> <%= process.env.APP_NAME %>. All rights reserved.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

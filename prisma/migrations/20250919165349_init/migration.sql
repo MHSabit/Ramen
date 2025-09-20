@@ -177,10 +177,21 @@ CREATE TABLE "payment_transactions" (
     "reference_number" TEXT,
     "status" TEXT DEFAULT 'pending',
     "raw_status" TEXT,
-    "amount" DECIMAL(65,30),
+    "amount" DOUBLE PRECISION,
     "currency" TEXT,
-    "paid_amount" DECIMAL(65,30),
+    "paid_amount" DOUBLE PRECISION,
     "paid_currency" TEXT,
+    "contact_first_name" TEXT,
+    "contact_last_name" TEXT,
+    "contact_email" TEXT,
+    "contact_phone" TEXT,
+    "shipping_address" TEXT,
+    "shipping_city" TEXT,
+    "shipping_state" TEXT,
+    "shipping_zip_code" TEXT,
+    "shipping_method" TEXT,
+    "shipping_cost" DOUBLE PRECISION,
+    "shipping_days" TEXT,
 
     CONSTRAINT "payment_transactions_pkey" PRIMARY KEY ("id")
 );
@@ -323,16 +334,17 @@ CREATE TABLE "products" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT,
-    "price" DECIMAL(10,2) NOT NULL,
+    "price" DOUBLE PRECISION NOT NULL,
     "quantity" INTEGER NOT NULL DEFAULT 0,
-    "category" TEXT,
     "image" TEXT,
-    "spice_level" TEXT,
+    "spice_level" INTEGER DEFAULT 1,
     "features" TEXT,
     "popular" BOOLEAN NOT NULL DEFAULT false,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "deleted_at" TIMESTAMP(3),
+    "original_price" INTEGER DEFAULT 0,
+    "categoryId" TEXT,
 
     CONSTRAINT "products_pkey" PRIMARY KEY ("id")
 );
@@ -343,6 +355,8 @@ CREATE TABLE "product_categories" (
     "name" TEXT NOT NULL,
     "description" TEXT,
     "image" TEXT,
+    "icon" TEXT NOT NULL DEFAULT 'Fish',
+    "color" TEXT NOT NULL DEFAULT 'Pink to Orange',
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "deleted_at" TIMESTAMP(3),
@@ -351,12 +365,30 @@ CREATE TABLE "product_categories" (
 );
 
 -- CreateTable
+CREATE TABLE "order_items" (
+    "id" TEXT NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "deleted_at" TIMESTAMP(3),
+    "transaction_id" TEXT NOT NULL,
+    "product_id" TEXT,
+    "product_name" TEXT NOT NULL,
+    "product_description" TEXT,
+    "product_price" DOUBLE PRECISION NOT NULL,
+    "quantity" INTEGER NOT NULL DEFAULT 1,
+    "total_price" DOUBLE PRECISION NOT NULL,
+    "delivery_status" TEXT DEFAULT 'pending',
+
+    CONSTRAINT "order_items_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "carts" (
     "id" TEXT NOT NULL,
     "cart_id" TEXT NOT NULL,
     "product_id" TEXT NOT NULL,
     "quantity" INTEGER NOT NULL DEFAULT 1,
-    "unit_price" DECIMAL(10,2) NOT NULL,
+    "unit_price" DOUBLE PRECISION NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -454,6 +486,15 @@ ALTER TABLE "user_settings" ADD CONSTRAINT "user_settings_user_id_fkey" FOREIGN 
 
 -- AddForeignKey
 ALTER TABLE "user_settings" ADD CONSTRAINT "user_settings_setting_id_fkey" FOREIGN KEY ("setting_id") REFERENCES "settings"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "products" ADD CONSTRAINT "products_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "product_categories"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "order_items" ADD CONSTRAINT "order_items_transaction_id_fkey" FOREIGN KEY ("transaction_id") REFERENCES "payment_transactions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "order_items" ADD CONSTRAINT "order_items_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "products"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "_PermissionToRole" ADD CONSTRAINT "_PermissionToRole_A_fkey" FOREIGN KEY ("A") REFERENCES "permissions"("id") ON DELETE CASCADE ON UPDATE CASCADE;

@@ -81,7 +81,7 @@ export class StripeService {
       }, 0);
       
       const calculatedTotal = total_amount || (productsTotal + shipping_cost);
-      console.log('calculatedTotal', calculatedTotal);
+      // console.log('calculatedTotal', calculatedTotal);
       // Validate products
       if (!products || products.length === 0) {
         throw new Error('Products are required');
@@ -179,9 +179,16 @@ export class StripeService {
         await tx.orderItem.createMany({
           data: orderItems,
         });
-
+        const usercart = await this.prisma.user.findUnique({
+          where: { id : userId },
+        });
+        const cartDelete = await this.prisma.cart.deleteMany({
+          where: { cart_id: usercart.cart_id },       
+        });
+        // console.log('cartDelete', cartDelete);
         return transaction;
       });
+
 
       // Create checkout session with customer and metadata
       const session = await StripePayment.createCheckoutSession({

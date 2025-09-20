@@ -46,7 +46,7 @@ export class ProductsController {
         if (limitNumber < 1 || limitNumber > 100) {
             throw new HttpException('Limit must be between 1 and 100', HttpStatus.BAD_REQUEST);
         }
-        console.log('req.user', req.user.userId);
+        // console.log('req.user', req.user.userId);
         return await this.productService.getAllProducts(q, limitNumber, pageNumber);
     }
 
@@ -99,7 +99,7 @@ export class ProductsController {
         @UploadedFile() image?: Express.Multer.File
     ) {
         // Add the uploaded file to the product data
-        console.log("product", product);
+        // console.log("product", product);
 
         if (image) {
             product.image = image;

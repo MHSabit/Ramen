@@ -78,4 +78,108 @@ export class MailService {
       console.log(error);
     }
   }
+
+  // Send order confirmation email to customer
+  async sendOrderConfirmationEmail(params: {
+    customerEmail: string;
+    customerName: string;
+    orderNumber: string;
+    orderDate: string;
+    totalAmount: number;
+    items: Array<{
+      name: string;
+      quantity: number;
+      price: number;
+      spice_level?: string;
+    }>;
+    shippingAddress: string;
+    shippingCity: string;
+    shippingState: string;
+    shippingZipCode: string;
+    shippingMethod: string;
+    shippingDays: number;
+  }) {
+    try {
+      const from = `${process.env.APP_NAME} <${appConfig().mail.from}>`;
+      const subject = `Order Confirmation - #${params.orderNumber}`;
+
+      await this.queue.add('sendOrderConfirmation', {
+        to: params.customerEmail,
+        from: from,
+        subject: subject,
+        template: 'order-confirmation',
+        context: {
+          customerName: params.customerName,
+          orderNumber: params.orderNumber,
+          orderDate: params.orderDate,
+          totalAmount: params.totalAmount.toFixed(2),
+          items: params.items,
+          shippingAddress: params.shippingAddress,
+          shippingCity: params.shippingCity,
+          shippingState: params.shippingState,
+          shippingZipCode: params.shippingZipCode,
+          shippingMethod: params.shippingMethod,
+          shippingDays: params.shippingDays,
+        },
+      });
+    } catch (error) {
+      console.log('Error sending order confirmation email:', error);
+    }
+  }
+
+  // Send order notification email to admin
+  async sendAdminOrderNotification(params: {
+    adminEmail: string;
+    customerName: string;
+    customerEmail: string;
+    customerPhone: string;
+    customerId: string;
+    orderNumber: string;
+    orderDate: string;
+    totalAmount: number;
+    items: Array<{
+      name: string;
+      quantity: number;
+      price: number;
+      spice_level?: string;
+    }>;
+    shippingAddress: string;
+    shippingCity: string;
+    shippingState: string;
+    shippingZipCode: string;
+    shippingMethod: string;
+    shippingDays: number;
+    adminDashboardUrl: string;
+  }) {
+    try {
+      const from = `${process.env.APP_NAME} <${appConfig().mail.from}>`;
+      const subject = `New Order Alert - #${params.orderNumber} - $${params.totalAmount.toFixed(2)}`;
+
+      await this.queue.add('sendAdminOrderNotification', {
+        to: params.adminEmail,
+        from: from,
+        subject: subject,
+        template: 'admin-order-notification',
+        context: {
+          customerName: params.customerName,
+          customerEmail: params.customerEmail,
+          customerPhone: params.customerPhone,
+          customerId: params.customerId,
+          orderNumber: params.orderNumber,
+          orderDate: params.orderDate,
+          totalAmount: params.totalAmount.toFixed(2),
+          items: params.items,
+          shippingAddress: params.shippingAddress,
+          shippingCity: params.shippingCity,
+          shippingState: params.shippingState,
+          shippingZipCode: params.shippingZipCode,
+          shippingMethod: params.shippingMethod,
+          shippingDays: params.shippingDays,
+          adminDashboardUrl: params.adminDashboardUrl,
+        },
+      });
+    } catch (error) {
+      console.log('Error sending admin order notification:', error);
+    }
+  }
 }

@@ -226,7 +226,10 @@ export class AuthService {
 
   async login(loginDto: AuthEmailLoginDto): Promise<ApiResponse> {
     try {
+      // console.log("loginDto", loginDto.email);
       const user = await UserRepository.getUserDetailsByEmail(loginDto.email);
+      // console.log("user", user);
+      // console.log("loginDto", loginDto);
       if (!user) {
         throw new UnprocessableEntityException({
           status: HttpStatus.NOT_FOUND,
@@ -249,7 +252,7 @@ export class AuthService {
         loginDto.password,
         user.password,
       );
-      console.log("isValidPassword", isValidPassword);
+      // console.log("isValidPassword", isValidPassword);
   
       if (!isValidPassword) {
         throw new UnprocessableEntityException({
@@ -299,7 +302,7 @@ export class AuthService {
   async refreshToken(data: { userId: string }): Promise<ApiResponse> {
     try {
       const user = await UserRepository.getUserDetails(data.userId);
-      console.log("user", user);
+      // console.log("user", user);
       if (!user) {
         throw new UnauthorizedException('User not found');
       }
@@ -367,8 +370,8 @@ export class AuthService {
     };
 
     const refreshSecret = appConfig().jwt.refresh_secret;
-    console.log('Auth Service - getTokensData - Refresh Secret:', refreshSecret);
-    console.log('Auth Service - getTokensData - Refresh Secret type:', typeof refreshSecret);
+    // console.log('Auth Service - getTokensData - Refresh Secret:', refreshSecret);
+    // console.log('Auth Service - getTokensData - Refresh Secret type:', typeof refreshSecret);
     
     const [token, refreshToken] = await Promise.all([
       this.jwtService.signAsync(jwtPayload, {
@@ -384,7 +387,7 @@ export class AuthService {
       ),
     ]);
     
-    console.log('Auth Service - getTokensData - Generated refresh token:', refreshToken);
+    // console.log('Auth Service - getTokensData - Generated refresh token:', refreshToken);
 
     const dateTokenExpires = new Date(tokenExpires);
 

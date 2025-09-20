@@ -197,7 +197,7 @@ export class ProductsService {
             }
 
             // Build updateData object dynamically
-            console.log("product", product);
+            // console.log("product", product);
             const updateData: any = {};
             if (product.name !== undefined) updateData.name = product.name;
             if (product.description !== undefined) updateData.description = product.description;

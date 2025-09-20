@@ -7,7 +7,7 @@ export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Get all products' })
+  @ApiOperation({ summary: 'Get popular products' })
   async findAll() {
     return this.productsService.findAll();
   }

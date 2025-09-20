@@ -43,8 +43,17 @@ export class CartController {
         @Param('product_id') product_id: string,
         @Req() req: Request
     ) {
-        console.log('cart_id:', cart_id);
-        console.log('product_id:', product_id);
-        return this.cartService.removeCartItem(cart_id, product_id, req.user.userId);
+        const removeCartItem = await this.cartService.removeCartItem(cart_id, product_id, req.user.userId);
+        return removeCartItem;
     }
+
+
+    @Delete()
+    async clearCacrt(
+        @Req() req: Request
+    ) {
+        return this.cartService.clearCart(req.user.userId);
+
+    }
+
 }

@@ -14,8 +14,8 @@ export interface JwtRefreshPayloadType {
 export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh') {
   constructor() {
     const refreshSecret = appConfig().jwt.secret;
-    console.log('JWT Refresh Strategy - Constructor - Secret:', refreshSecret);
-    console.log('JWT Refresh Strategy - Constructor - Secret type:', typeof refreshSecret);
+    // console.log('JWT Refresh Strategy - Constructor - Secret:', refreshSecret);
+    // console.log('JWT Refresh Strategy - Constructor - Secret type:', typeof refreshSecret);
     
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -25,15 +25,15 @@ export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh'
   }
 
   public validate(payload: JwtRefreshPayloadType): JwtRefreshPayloadType {
-    console.log('JWT Refresh Strategy - Payload:', payload);
-    console.log('JWT Refresh Strategy - Secret:', appConfig().jwt.refresh_secret);
+    // console.log('JWT Refresh Strategy - Payload:', payload);
+    // console.log('JWT Refresh Strategy - Secret:', appConfig().jwt.refresh_secret);
     
     if (!payload.userId) {
-      console.log('JWT Refresh Strategy - No userId in payload');
+      // console.log('JWT Refresh Strategy - No userId in payload');
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    console.log('JWT Refresh Strategy - Validation successful');
+    // console.log('JWT Refresh Strategy - Validation successful');
     return payload;
   }
 }
