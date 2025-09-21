@@ -44,7 +44,7 @@ export class UserDashboardService {
           quantity: item.quantity,
           unit_price: item.product_price,
           total_price: item.total_price,
-          
+          delivery_status: item.delivery_status || 'pending',
         }));
 
         const totalPrice = order.order_items.reduce((sum, item) => sum + item.total_price, 0);
