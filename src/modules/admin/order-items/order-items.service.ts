@@ -78,10 +78,10 @@ export class OrderItemsService {
                 created_at: 'desc' // Order by newest first
             }
         });
-
-        // Get total count for pagination info
-        const totalCount = await prisma.paymentTransaction.count({
-            where: where_condition
+        
+        const totalCount = await prisma.orderItem.groupBy({
+          by: ['transaction_id'],      // group rows by transaction_id
+          where: where_condition       // your existing condition
         });
 
         // Format the response to include all requested fields
@@ -104,6 +104,7 @@ export class OrderItemsService {
                 customer_name: order.user?.name || order.contact_first_name || 'N/A',
                 customer_email: order.user?.email || order.contact_email || 'N/A',
                 items: items,
+                delivery_status: items[0].delivery_status || 'pending',
                 total_price: totalPrice,
                 status: order.status,
                 created_at: order.created_at.toISOString().split('T')[0], // Format as YYYY-MM-DD
@@ -122,7 +123,7 @@ export class OrderItemsService {
 
         return ApiResponseHelper.paginated(
             formattedOrders,
-            totalCount,
+            totalCount.length,
             "Orders data fetch successful",
             HttpStatus.OK,
             "ORDERS_FETCH_SUCCESS"
@@ -231,8 +232,8 @@ export class OrderItemsService {
 
 
   async updateDeliveryStatus(id: string, delivery_status: string){
-    const orderItem = await prisma.orderItem.update({
-      where: { id: id },
+    const orderItem = await prisma.orderItem.updateMany({
+      where: { transaction_id: id },
       data: { delivery_status: delivery_status },
     });
     return ApiResponseHelper.success(

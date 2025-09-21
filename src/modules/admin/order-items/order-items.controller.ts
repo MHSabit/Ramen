@@ -54,6 +54,7 @@ export class OrderItemsController {
   @Patch(':id/delivery-status')
   @ApiOperation({ summary: 'Update delivery status' })
   async updateDeliveryStatus(@Param('id') id: string, @Body() data: { delivery_status: string }) {
+    console.log('data', data);
     return await this.orderItemsService.updateDeliveryStatus(id, data.delivery_status);
   }
 

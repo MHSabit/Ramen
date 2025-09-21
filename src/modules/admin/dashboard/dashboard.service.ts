@@ -18,7 +18,10 @@ export class DashboardService {
         try {
             const totalProducts = await this.prisma.product.count();
             const totalCategories = await this.prisma.productCategory.count();
-            const totalOrders = await this.prisma.orderItem.count();
+            const totalGroupedOrders = await this.prisma.orderItem.groupBy({
+                by: ['transaction_id']
+              });
+            const totalOrders = totalGroupedOrders.length;
             const totalUsers = await this.prisma.user.count();
             const result = await this.prisma.paymentTransaction.aggregate({
                 _sum: { amount: true },
