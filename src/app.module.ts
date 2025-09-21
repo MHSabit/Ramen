@@ -24,6 +24,7 @@ import { ProductsModule } from './modules/products/products.module';
 import { ProductPageModule } from './modules/product-page/product-page.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { CategoryListModule } from './modules/category-list/category-list.module';
+import { UserDashboardModule } from './modules/user-dashboard/user-dashboard.module';
 
 @Module({
   imports: [
@@ -82,6 +83,7 @@ import { CategoryListModule } from './modules/category-list/category-list.module
     ProductsModule,
     ProductPageModule,
     CategoryListModule,
+    UserDashboardModule,
   ],
   controllers: [AppController],
   providers: [
