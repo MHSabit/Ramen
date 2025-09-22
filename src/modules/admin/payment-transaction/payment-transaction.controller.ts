@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Delete, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Param, Delete, UseGuards, Req, Query } from '@nestjs/common';
 import { PaymentTransactionService } from './payment-transaction.service';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { RolesGuard } from '../../../common/guard/role/roles.guard';
@@ -17,25 +17,25 @@ export class PaymentTransactionController {
     private readonly paymentTransactionService: PaymentTransactionService,
   ) {}
 
-  @ApiOperation({ summary: 'Get all packages' })
+  @ApiOperation({ summary: 'Get all transactions' })
   @Get()
-  async findAll(@Req() req: Request) {
-    try {
-      const user_id = req.user.userId;
+  async findAll(
+    @Req() req: Request,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const pageNumber = page ? parseInt(page, 10) : 1;
+    const limitNumber = limit ? parseInt(limit, 10) : 10;
 
-      const paymentTransactions =
-        await this.paymentTransactionService.findAll(user_id);
+    const paymentTransactions = await this.paymentTransactionService.findAll(
+      pageNumber,
+      limitNumber,
+    );
 
-      return paymentTransactions;
-    } catch (error) {
-      return {
-        success: false,
-        message: error.message,
-      };
-    }
+    return paymentTransactions;
   }
 
-  @ApiOperation({ summary: 'Get one package' })
+  @ApiOperation({ summary: 'Get one transaction' })
   @Get(':id')
   async findOne(@Req() req: Request, @Param('id') id: string) {
     try {

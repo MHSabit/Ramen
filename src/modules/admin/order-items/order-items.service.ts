@@ -100,7 +100,7 @@ export class OrderItemsService {
             const totalPrice = order.order_items.reduce((sum, item) => sum + item.total_price, 0);
 
             return {
-                order_id: order.id,
+                order_id: items?.length > 0 ? items[0].id : '',
                 customer_name: order.user?.name || order.contact_first_name || 'N/A',
                 customer_email: order.user?.email || order.contact_email || 'N/A',
                 items: items,
@@ -233,7 +233,7 @@ export class OrderItemsService {
 
   async updateDeliveryStatus(id: string, delivery_status: string){
     const orderItem = await prisma.orderItem.updateMany({
-      where: { transaction_id: id },
+      where: { id: id },
       data: { delivery_status: delivery_status },
     });
     return ApiResponseHelper.success(

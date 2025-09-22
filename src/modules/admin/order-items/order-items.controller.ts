@@ -38,7 +38,6 @@ export class OrderItemsController {
         if (limitNumber < 1 || limitNumber > 100) {
             throw new HttpException('Limit must be between 1 and 100', HttpStatus.BAD_REQUEST);
         }
-        // console.log('req.user', req.user.userId);
         return await this.orderItemsService.getAllOrders(limitNumber, pageNumber, q);
     }
 
@@ -54,7 +53,6 @@ export class OrderItemsController {
   @Patch(':id/delivery-status')
   @ApiOperation({ summary: 'Update delivery status' })
   async updateDeliveryStatus(@Param('id') id: string, @Body() data: { delivery_status: string }) {
-    console.log('data', data);
     return await this.orderItemsService.updateDeliveryStatus(id, data.delivery_status);
   }
 

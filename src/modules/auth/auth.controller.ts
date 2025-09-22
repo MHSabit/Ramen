@@ -93,7 +93,6 @@ export class AuthController {
     try {
       const user_id = req.user.userId;
       
-      // console.log('Refresh token request for user:', user_id);
       
       const response = await this.authService.refreshToken({
         userId: user_id,
@@ -167,17 +166,9 @@ export class AuthController {
     @Body() data: UpdateUserDto,
     @UploadedFile() image: Express.Multer.File,
   ) {
-    try {
       const user_id = req.user.userId;
-      const response = await this.authService.updateUser(user_id, data, image);
-      return response;
-    } catch (error) {
-      return {
-        success: false,
-        message: 'Failed to update user',
-        data:null
-      };
-    }
+      return await this.authService.updateUser(user_id, data, image);
+      
   }
 
   // --------------change password---------

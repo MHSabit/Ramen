@@ -80,7 +80,7 @@ export class AuthService {
     userId: string,
     updateUserDto: UpdateUserDto,
     image?: Express.Multer.File,
-  ) {
+  ): Promise<ApiResponse<null>> {
     try {
       const data: any = {};
       if (updateUserDto.name) {
@@ -149,24 +149,24 @@ export class AuthService {
           },
         });
 
-        return {
-          success: true,
-          message: 'User updated successfully',
-          data:null
-        };
+        return ApiResponseHelper.success(
+          null,
+          'User updated successfully',
+          HttpStatus.OK,
+          'USER_UPDATE_SUCCESS'
+        );
       } else {
-        return {
-          success: false,
-          message: 'User not found',
-          data:null
-        };
+        return ApiResponseHelper.notFound(
+          'User not found',
+          'USER_NOT_FOUND'
+        );
       }
     } catch (error) {
-      return {
-        success: false,
-        message: error.message,
-        data:null
-      };
+      return ApiResponseHelper.error(
+        error.message || 'Failed to update user',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        'USER_UPDATE_ERROR'
+      );
     }
   }
 
@@ -370,8 +370,6 @@ export class AuthService {
     };
 
     const refreshSecret = appConfig().jwt.refresh_secret;
-    // console.log('Auth Service - getTokensData - Refresh Secret:', refreshSecret);
-    // console.log('Auth Service - getTokensData - Refresh Secret type:', typeof refreshSecret);
     
     const [token, refreshToken] = await Promise.all([
       this.jwtService.signAsync(jwtPayload, {
@@ -415,30 +413,30 @@ export class AuthService {
     }
   }
 
-  async revokeRefreshToken(user_id: string) {
+  async revokeRefreshToken(user_id: string): Promise<ApiResponse<null>> {
     try {
       const storedToken = await this.redis.get(`refresh_token:${user_id}`);
       if (!storedToken) {
-        return {
-          success: false,
-          message: 'Refresh token not found',
-          data:null
-        };
+        return ApiResponseHelper.notFound(
+          'Refresh token not found',
+          'REFRESH_TOKEN_NOT_FOUND'
+        );
       }
 
       await this.redis.del(`refresh_token:${user_id}`);
 
-      return {
-        success: true,
-        message: 'Refresh token revoked successfully',
-        data:null
-      };
+      return ApiResponseHelper.success(
+        null,
+        'Refresh token revoked successfully',
+        HttpStatus.OK,
+        'REFRESH_TOKEN_REVOKED_SUCCESS'
+      );
     } catch (error) {
-      return {
-        success: false,
-        message: error.message,
-        data:null
-      };
+      return ApiResponseHelper.error(
+        error.message || 'Failed to revoke refresh token',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        'REFRESH_TOKEN_REVOKE_ERROR'
+      );
     }
   }
 

@@ -34,23 +34,18 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
   }
 
   handleRequest(err, user, info) {
-    // Check for specific JWT errors
     if (info?.name === 'TokenExpiredError') {
-      // console.log("JWT Auth Guard - Token expired");
       throw new UnauthorizedException('Token has expired');
     }
     
     if (info?.name === 'JsonWebTokenError') {
-      // console.log("JWT Auth Guard - Invalid token");
       throw new UnauthorizedException('Invalid token');
     }
     
     if (err || !user) {
-      // console.log("JWT Auth Guard - Throwing error:", err?.message || 'Unauthorized');
       throw err || new UnauthorizedException('Unauthorized');
     }
     
-    // console.log("JWT Auth Guard - Authentication successful");
     return user;
   }
 }

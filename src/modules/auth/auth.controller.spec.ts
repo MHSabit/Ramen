@@ -145,7 +145,7 @@ describe('AuthController', () => {
 
   it('should logout user', async () => {
     const result = await controller.logout({ user: { userId: 1 } } as any);
-    expect(result.success).toBe(true);
+    expect(result.data.success).toBe(true);
   });
 
   it('should update user', async () => {
@@ -154,7 +154,7 @@ describe('AuthController', () => {
       {},
       {} as any,
     );
-    expect(result.success).toBe(true);
+    expect(result.execStatus).toBe(true);
   });
 
   it('should handle forgot password', async () => {

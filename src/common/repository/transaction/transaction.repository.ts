@@ -129,7 +129,6 @@ export class TransactionRepository {
       data['raw_status'] = raw_status;
       order_data['payment_raw_status'] = raw_status;
     }
-    // console.log('reference_number', reference_number);
     const paymentTransaction = await prisma.paymentTransaction.findMany({
       where: {
         reference_number: reference_number,
@@ -147,8 +146,6 @@ export class TransactionRepository {
     //     },
     //   });
     // }
-    // console.log('data', data);
-    // console.log('paymentTransaction', paymentTransaction);
     return await prisma.paymentTransaction.updateMany({
       where: {
         reference_number: reference_number,
@@ -203,7 +200,6 @@ export class TransactionRepository {
    * @returns
    */
   static async getTransactionByReference(reference_number: string) {
-    // console.log('reference_number', reference_number);
     return await prisma.paymentTransaction.findFirst({
       where: {
         reference_number: reference_number,

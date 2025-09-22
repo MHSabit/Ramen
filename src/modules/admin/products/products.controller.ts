@@ -46,7 +46,6 @@ export class ProductsController {
         if (limitNumber < 1 || limitNumber > 100) {
             throw new HttpException('Limit must be between 1 and 100', HttpStatus.BAD_REQUEST);
         }
-        // console.log('req.user', req.user.userId);
         return await this.productService.getAllProducts(q, limitNumber, pageNumber);
     }
 

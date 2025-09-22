@@ -1,29 +1,25 @@
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { UserRepository } from '../../../common/repository/user/user.repository';
+import { ApiResponseHelper } from 'src/common/helpers/api-response.helper';
 
 @Injectable()
 export class PaymentTransactionService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll(user_id?: string) {
+  async findAll(page: number = 1, limit: number = 10) {
     try {
-      const userDetails = await UserRepository.getUserDetails(user_id);
+      const skip = (page - 1) * limit;
 
-      const whereClause = {};
-      if (userDetails.type == 'vendor') {
-        whereClause['user_id'] = user_id;
-      }
-
-      const paymentTransactions = await this.prisma.paymentTransaction.findMany(
-        {
-          where: {
-            ...whereClause,
-          },
+      const [paymentTransactions, total] = await this.prisma.$transaction([
+        this.prisma.paymentTransaction.findMany({
+          skip,
+          take: limit,
+          orderBy: { created_at: 'desc' },
           select: {
             id: true,
-            reference_number: true,
             status: true,
+            raw_status: true,
             provider: true,
             amount: true,
             currency: true,
@@ -31,19 +27,35 @@ export class PaymentTransactionService {
             paid_currency: true,
             created_at: true,
             updated_at: true,
+            user: {
+              select: {
+                email: true,
+              },
+            },
+            // send order id from order_items
+            order_items: {
+              select: {
+                id: true,
+              },
+            },
           },
-        },
-      );
+        }),
+        this.prisma.paymentTransaction.count(),
+      ]);
 
-      return {
-        success: true,
-        data: paymentTransactions,
-      };
+      return ApiResponseHelper.paginated(
+        paymentTransactions,
+        total,
+        'Payment transactions fetched successfully',
+        HttpStatus.OK,
+        'PAYMENT_TRANSACTIONS_FETCH_SUCCESS'
+      );
     } catch (error) {
-      return {
-        success: false,
-        message: error.message,
-      };
+      return ApiResponseHelper.error(
+        error.message || 'Failed to get payment transaction',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        'PAYMENT_TRANSACTION_GET_ERROR'
+      );
     }
   }
 
