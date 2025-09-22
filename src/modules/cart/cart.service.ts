@@ -294,7 +294,14 @@ export class CartService {
                 const cartClear = await prisma.cart.deleteMany({    
                     where: { cart_id: cartID },
                 });
+                return ApiResponseHelper.success(
+                    cartClear ,
+                    'Products removed successfully from cart',
+                    HttpStatus.OK,
+                    'CART_ITEM_DELETE_SUCCESS'
+                );
             } 
+            
     } catch (error) {
                 if(error instanceof HttpException){
                     throw error;

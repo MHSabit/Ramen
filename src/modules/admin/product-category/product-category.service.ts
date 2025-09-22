@@ -250,9 +250,7 @@ export class ProductCategoryService {
                     },
                 },
             });
-            // console.log('product', product);
             for(const p of product){
-                // console.log('p', p);
                 await prisma.product.update({
                     where: {
                         id: p.id,
@@ -261,7 +259,6 @@ export class ProductCategoryService {
                         categoryId: null,
                     },
                 });
-                // console.log('deleted product', p.id);
             }
 
             // Delete associated image if exists

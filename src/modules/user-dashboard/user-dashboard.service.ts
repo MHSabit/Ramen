@@ -50,7 +50,8 @@ export class UserDashboardService {
         const totalPrice = order.order_items.reduce((sum, item) => sum + item.total_price, 0);
 
         return {
-          order_id: order.id,
+          transaction_id: order.id,
+          order_id: items[0]?.id ?? "",
           items: items,
           delivery_status: items[0].delivery_status || 'pending',
           total_price: totalPrice,

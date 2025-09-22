@@ -20,7 +20,7 @@ export class LocalAdapter implements IStorage {
    * @returns
    */
   url(key: string): string {
-    return `${process.env.APP_URL}${this._config.connection.publicUrl}/${key}`;
+    return `${process.env.ppeni}${this._config.connection.publicUrl}/${key}`;
   }
 
   /**

@@ -106,7 +106,6 @@ export class ProductRepository {
   static async checkStockAvailability(products: Array<{ productId: string; quantity: number }>) {
     try {
       const productIds = products.map(p => p.productId);
-    //   console.log('productIds2', productIds);
       const existingProducts = await prisma.product.findMany({
         where: {
           id: { in: productIds }
@@ -117,7 +116,6 @@ export class ProductRepository {
           quantity: true
         }
       });
-    //   console.log('existingProducts', existingProducts);
 
       const stockCheck = {
         available: true,
@@ -141,7 +139,6 @@ export class ProductRepository {
           });
         }
       }
-    //   console.log('stockCheck', stockCheck);
       return stockCheck;
     } catch (error) {
       throw new Error(`Failed to check stock availability: ${error.message}`);

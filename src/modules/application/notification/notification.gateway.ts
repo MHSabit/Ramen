@@ -62,7 +62,6 @@ export class NotificationGateway
   }
 
   async handleConnection(client: Socket, ...args: any[]) {
-    // console.log('new connection!', client.id);
     const userId = client.handshake.query.userId as string; // User ID passed as query parameter
     if (userId) {
       this.clients.set(userId, client.id);
@@ -71,7 +70,6 @@ export class NotificationGateway
   }
 
   handleDisconnect(client: Socket) {
-    // console.log('client disconnected!', client.id);
     const userId = [...this.clients.entries()].find(
       ([, socketId]) => socketId === client.id,
     )?.[0];
@@ -98,9 +96,7 @@ export class NotificationGateway
     if (targetSocketId) {
       await this.redisPubClient.publish('notification', JSON.stringify(data));
 
-      // console.log(`Notification sent to user ${data.userId}`);
     } else {
-      // console.log(`User ${data.userId} not connected`);
     }
   }
 

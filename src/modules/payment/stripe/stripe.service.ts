@@ -9,22 +9,8 @@ import { ApiResponseHelper } from '../../../common/helpers/api-response.helper';
 @Injectable()
 export class StripeService {
   constructor(private prisma: PrismaService) {}
-  async handleWebhook(rawBody: string, sig: string | string[]): Promise<ApiResponse<any>> {
-    try {
-      const result = await StripePayment.handleWebhook(rawBody, sig);
-      return ApiResponseHelper.success(
-        result,
-        'Webhook handled successfully',
-        HttpStatus.OK,
-        'WEBHOOK_HANDLE_SUCCESS'
-      );
-    } catch (error) {
-      return ApiResponseHelper.error(
-        error.message || 'Failed to handle webhook',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-        'WEBHOOK_HANDLE_ERROR'
-      );
-    }
+  async handleWebhook(rawBody: string, sig: string | string[]) {
+    return StripePayment.handleWebhook(rawBody, sig);
   }
 
   async createPayment({
@@ -81,7 +67,6 @@ export class StripeService {
       }, 0);
       
       const calculatedTotal = total_amount || (productsTotal + shipping_cost);
-      // console.log('calculatedTotal', calculatedTotal);
       // Validate products
       if (!products || products.length === 0) {
         throw new Error('Products are required');
@@ -94,7 +79,6 @@ export class StripeService {
 
       // Check inventory availability before creating payment
       const productsWithIds = products.filter(p => p.product_id);
-      // console.log('productsWithIds', productsWithIds);
       if (productsWithIds.length > 0) {
         const stockCheck = await ProductRepository.checkStockAvailability(
           productsWithIds.map(p => ({
@@ -102,7 +86,6 @@ export class StripeService {
             quantity: p.quantity || 1
           }))
         );
-        // console.log('stockCheck', stockCheck);
 
         if (!stockCheck.available) {
           const errorMessages = [];
@@ -185,7 +168,6 @@ export class StripeService {
         const cartDelete = await this.prisma.cart.deleteMany({
           where: { cart_id: usercart.cart_id },       
         });
-        // console.log('cartDelete', cartDelete);
         return transaction;
       });
 
@@ -250,7 +232,6 @@ export class StripeService {
 
   async getTransactionById(transactionId: string): Promise<ApiResponse<any>> {
     const transaction = await TransactionRepository.getTransactionById(transactionId);
-    console.log(transaction)
     return ApiResponseHelper.success(transaction, 'Transaction fetched successfully', HttpStatus.OK, 'TRANSACTION_FETCH_SUCCESS');
   }
 }

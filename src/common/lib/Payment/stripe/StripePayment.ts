@@ -47,9 +47,6 @@ export class StripePayment {
     name: string;
     email: string;
   }): Promise<stripe.Customer> {
-    // console.log(user_id,
-    // name,
-    // email,);
     const customer = await Stripe.customers.create({
       name: name,
       email: email,
@@ -58,7 +55,6 @@ export class StripePayment {
       },
       description: 'New Customer',
     });
-    // console.log(' customer Details',customer);
     return customer;
   }
 

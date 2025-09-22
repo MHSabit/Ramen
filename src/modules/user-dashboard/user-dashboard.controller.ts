@@ -1,7 +1,5 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, UseGuards, Req } from '@nestjs/common';
 import { UserDashboardService } from './user-dashboard.service';
-import { CreateUserDashboardDto } from './dto/create-user-dashboard.dto';
-import { UpdateUserDashboardDto } from './dto/update-user-dashboard.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Request } from 'express';
 

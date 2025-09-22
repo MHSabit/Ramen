@@ -24,12 +24,6 @@ import { GoogleStrategy } from './strategies/google.strategy';
         const jwtRefreshSecret = appConfig().jwt.refresh_secret;
         const jwtExpiry = appConfig().jwt.expiry;
         
-        // console.log('JWT Module - Access Secret:', jwtSecret);
-        // console.log('JWT Module - Access Secret type:', typeof jwtSecret);
-        // console.log('JWT Module - Access Secret length:', jwtSecret?.length);
-        // console.log('JWT Module - Refresh Secret:', jwtRefreshSecret);
-        // console.log('JWT Module - JWT Expiry:', jwtExpiry);
-        
         if (!jwtSecret) {
           // console.error('JWT Module - CRITICAL ERROR: No JWT secret found!');
           throw new Error('JWT secret is not configured');

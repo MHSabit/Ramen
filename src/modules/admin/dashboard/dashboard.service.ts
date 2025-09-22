@@ -26,6 +26,10 @@ export class DashboardService {
             const result = await this.prisma.paymentTransaction.aggregate({
                 _sum: { amount: true },
             });
+            const totalGroupedTransactions = await this.prisma.paymentTransaction.groupBy({
+                by: ['id']
+            });
+            const totalTransactions = totalGroupedTransactions.length;
             const totalRevenue = result._sum.amount;
 
             return ApiResponseHelper.success(
@@ -35,6 +39,7 @@ export class DashboardService {
                     totalOrders,
                     totalUsers,
                     totalRevenue,
+                    totalTransactions,
                 },
                 'Dashboard data fetched successfully',
                 HttpStatus.OK,
