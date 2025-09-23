@@ -203,6 +203,7 @@ export class ProductsService {
             if (product.description !== undefined) updateData.description = product.description;
             if (product.price !== undefined) updateData.price = product.price;
             if (product.categoryId !== undefined) updateData.categoryId = product.categoryId;
+            if (product.categoryId === undefined) updateData.categoryId = null;
             if (product.quantity !== undefined) updateData.quantity = product.quantity;
             if (product.spice_level !== undefined) updateData.spice_level = product.spice_level;
             if (product.features !== undefined) updateData.features = product.features;
