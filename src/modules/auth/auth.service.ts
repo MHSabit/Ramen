@@ -1,5 +1,5 @@
 // external imports
-import { HttpStatus, Injectable, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common';
+import { HttpStatus, Injectable, NotFoundException, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRedis } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
@@ -226,25 +226,18 @@ export class AuthService {
 
   async login(loginDto: AuthEmailLoginDto): Promise<ApiResponse> {
     try {
-      // console.log("loginDto", loginDto.email);
       const user = await UserRepository.getUserDetailsByEmail(loginDto.email);
-      // console.log("user", user);
-      // console.log("loginDto", loginDto);
       if (!user) {
         throw new UnprocessableEntityException({
           status: HttpStatus.NOT_FOUND,
-          errors: {
-            email: 'User Not Found',
-          },
+          message: "User doesn't exist!",
+
         });
       }
-
       if (!user.password) {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
-          errors: {
-            password: 'incorrectPassword',
-          },
+          message: "Incorrect email or password",
         });
       }
 
@@ -252,14 +245,11 @@ export class AuthService {
         loginDto.password,
         user.password,
       );
-      // console.log("isValidPassword", isValidPassword);
   
       if (!isValidPassword) {
         throw new UnprocessableEntityException({
           status: HttpStatus.UNPROCESSABLE_ENTITY,
-          errors: {
-            password: 'incorrectPassword',
-          },
+          message: "Incorrect email or password",
         });
       }
       
@@ -267,7 +257,6 @@ export class AuthService {
         id: user.id,
       });
       
-      // store refreshToken
       await this.redis.set(
         `refresh_token:${user.id}`,
         refreshToken,
@@ -555,13 +544,23 @@ export class AuthService {
 
   async forgotPassword(email: string): Promise<ApiResponse> {
     try {
+      if (!email) {
+        throw new UnprocessableEntityException({
+          status: HttpStatus.UNPROCESSABLE_ENTITY,
+          message: 'Email is required',
+        });
+      }
+
       const user = await UserRepository.exist({
         field: 'email',
         value: email,
       });
 
       if (!user) {
-        return ApiResponseHelper.notFound('Email not found', 'EMAIL_NOT_FOUND');
+        throw new NotFoundException({
+          status: HttpStatus.NOT_FOUND,
+          message: 'Email not found',
+        });
       }
 
       const token = await UcodeRepository.createToken({
@@ -582,6 +581,9 @@ export class AuthService {
         'OTP_SENT'
       );
     } catch (error) {
+      if (error instanceof NotFoundException || error instanceof UnprocessableEntityException) {
+        throw error;
+      }
       return ApiResponseHelper.error(
         error.message || 'Something went wrong',
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -602,6 +604,9 @@ export class AuthService {
           email: email,
           token: token,
         });
+        console.log(existToken)
+        console.log(user)
+
 
         if (existToken) {
           await UserRepository.changePassword({
@@ -615,31 +620,33 @@ export class AuthService {
             token: token,
           });
 
-          return {
-            success: true,
-            message: 'Password updated successfully',
-            data:null
-          };
+          return ApiResponseHelper.success(
+            null,
+            'Password updated successfully',
+            HttpStatus.OK,
+            'PASSWORD_UPDATED_SUCCESS'
+          );
         } else {
-          return {
-            success: false,
+          throw new UnprocessableEntityException({
+            status: HttpStatus.UNPROCESSABLE_ENTITY,
             message: 'Invalid token',
-            data:null
-          };
+          });
         }
       } else {
-        return {
-          success: false,
+        throw new NotFoundException({
+          status: HttpStatus.NOT_FOUND,
           message: 'Email not found',
-          data:null
-        };
+        });
       }
     } catch (error) {
-      return {
-        success: false,
-        message: error.message,
-        data:null
-      };
+      if (error instanceof NotFoundException || error instanceof UnprocessableEntityException) {
+        throw error;
+      }
+      return ApiResponseHelper.error(
+        error.message || 'Something went wrong',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        'RESET_PASSWORD_ERROR'
+      );
     }
   }
 

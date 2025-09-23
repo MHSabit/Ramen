@@ -76,7 +76,6 @@ export class AuthController {
   
 
   // login user
-  // login user
   @ApiOperation({ summary: 'Login user' })
   @Post('login')
   async login(@Body() loginDto: AuthEmailLoginDto): Promise<ApiResponse> {
@@ -176,20 +175,8 @@ export class AuthController {
   @ApiOperation({ summary: 'Forgot password' })
   @Post('forgot-password')
   async forgotPassword(@Body() data: { email: string }) {
-    try {
-      // console.log("data", data);
       const email = data.email;
-      if (!email) {
-        throw new HttpException('Email not provided', HttpStatus.UNAUTHORIZED);
-      }
       return await this.authService.forgotPassword(email);
-    } catch (error) {
-      return {
-        success: false,
-        message: 'Something went wrong',
-        data:null
-      };
-    }
   }
 
   // verify email to verify the email
@@ -243,7 +230,6 @@ export class AuthController {
   async resetPassword(
     @Body() data: { email: string; token: string; password: string },
   ) {
-    try {
       const email = data.email;
       const token = data.token;
       const password = data.password;
@@ -264,13 +250,6 @@ export class AuthController {
         token: token,
         password: password,
       });
-    } catch (error) {
-      return {
-        success: false,
-        message: 'Something went wrong',
-        data:null
-      };
-    }
   }
 
   // change password if user want to change the password

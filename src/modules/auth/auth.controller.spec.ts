@@ -178,7 +178,7 @@ describe('AuthController', () => {
       token: '1234',
       password: 'newpass',
     });
-    expect(result.success).toBe(true);
+    expect(result.execStatus).toBe(true);
   });
 
   it('should change password', async () => {
