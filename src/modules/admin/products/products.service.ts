@@ -276,9 +276,17 @@ export class ProductsService {
             }
 
             // Delete the product
-            await prisma.product.delete({
+            const deletedProductFromCart = await prisma.product.delete({
                 where: { id },
             });
+            console.log("deletedProductFromCart", deletedProductFromCart);
+
+            // delete the related product from the cart table 
+            await prisma.cart.deleteMany({
+                where: {
+                    product_id: id
+                }
+            })
 
             return ApiResponseHelper.success(
                 null,
