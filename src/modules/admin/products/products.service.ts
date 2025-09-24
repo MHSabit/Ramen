@@ -276,10 +276,9 @@ export class ProductsService {
             }
 
             // Delete the product
-            const deletedProductFromCart = await prisma.product.delete({
+            await prisma.product.delete({
                 where: { id },
             });
-            console.log("deletedProductFromCart", deletedProductFromCart);
 
             // delete the related product from the cart table 
             await prisma.cart.deleteMany({
